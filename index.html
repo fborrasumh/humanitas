@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src *; img-src * data: blob:; font-src * data:;">
+<title>Humanitas — Generador de Revisiones</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --accent:#7c3aed;--accent-dim:#6d28d9;
+  --teal:#0891b2;--teal-dim:#0e7490;
+  --amber:#b45309;--red:#dc2626;--green:#15803d;
+  --surface:#f8f7ff;--s2:#ffffff;--s3:#f1f0f8;
+  --border:#e2e0f0;--bhi:#c4c0e0;
+  --text:#1e1b3a;--t2:#4a4570;--t3:#9691b8;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --shadow-md:0 4px 16px rgba(0,0,0,.08),0 2px 4px rgba(0,0,0,.04);
+  --ff:'Source Sans 3',system-ui,sans-serif;
+  --serif:'Playfair Display',Georgia,serif;
+  --r:8px;--rl:12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--ff);background:var(--surface);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+
+/* ── LAYOUT ── */
+.app{display:flex;min-height:100vh}
+.sidebar{width:255px;flex-shrink:0;background:#ffffff;border-right:1px solid var(--border);box-shadow:1px 0 0 var(--border);display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto}
+.main{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.logo{padding:20px 18px 16px;border-bottom:1px solid var(--border)}
+.logo-row{display:flex;align-items:center;gap:10px}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,var(--accent),var(--teal));border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px}
+.logo h1{font-family:var(--serif);font-size:17px;color:var(--text);font-weight:600}
+.logo span{font-size:10px;color:var(--t3);letter-spacing:.08em;text-transform:uppercase}
+.snav{padding:16px 18px 6px;font-size:10px;color:var(--t3);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+.ni-item{display:flex;align-items:center;gap:9px;padding:8px 18px;font-size:13px;color:var(--t2);cursor:pointer;transition:all .15s;border-left:2px solid transparent}
+.ni-item:hover{background:#f5f3ff;color:var(--text)}
+.ni-item.active{background:#ede9fe;color:var(--accent);border-left-color:var(--accent)}
+.ni-item .ni{font-size:14px;width:17px;text-align:center}
+.sidebar-footer{margin-top:auto;padding:14px 18px;border-top:1px solid var(--border);background:#fafafa}
+.user-row{display:flex;align-items:center;gap:9px}
+.avatar{width:30px;height:30px;border-radius:50%;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;color:var(--accent);border:1px solid #c4b5fd}
+.un{font-size:13px;color:var(--text);font-weight:500}.up{font-size:11px;color:var(--t3)}
+
+/* ── TOPBAR ── */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:13px 28px;border-bottom:1px solid var(--border);background:#ffffff;position:sticky;box-shadow:0 1px 0 var(--border);top:0;z-index:20;gap:12px}
+.topbar h2{font-family:var(--serif);font-size:18px;font-weight:600;color:var(--text);white-space:nowrap}
+.topbar p{font-size:11px;color:var(--t3);margin-top:1px}
+.topbar-actions{display:flex;gap:8px;flex-shrink:0}
+
+/* ── BUTTONS ── */
+button{font-family:var(--ff);cursor:pointer;border:none;transition:all .15s}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;font-size:13px;border-radius:var(--r);border:1px solid var(--bhi);background:transparent;color:var(--t2)}
+.btn:hover{background:#f5f3ff;color:var(--text)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--teal));border-color:var(--accent);color:#fff}
+.btn-primary:hover:not(:disabled){background:var(--accent-dim)}
+.btn-danger{border-color:rgba(226,75,74,.4);color:var(--red)}
+.btn-danger:hover{background:rgba(226,75,74,.1)}
+.btn-success{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-success:hover:not(:disabled){background:var(--teal-dim)}
+.btn-amber{background:rgba(180,83,9,.1);border-color:rgba(180,83,9,.4);color:var(--amber)}
+.btn-amber:hover:not(:disabled){background:rgba(180,83,9,.2)}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--t2);padding:5px 10px;font-size:12px;border-radius:6px}
+.btn-ghost:hover{background:#f5f3ff;color:var(--text)}
+.btn-stop{background:transparent;border:1px solid rgba(220,38,38,.5);color:var(--red)}
+.btn-stop:hover:not(:disabled){background:rgba(220,38,38,.08);border-color:var(--red)}
+.btn-stop:disabled{opacity:.35;cursor:not-allowed}
+
+/* ── TABS ── */
+.tabs{display:flex;border-bottom:1px solid var(--border);padding:0 28px;background:#ffffff;overflow-x:auto;flex-shrink:0}
+.tab{padding:11px 14px;font-size:13px;color:var(--t3);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;white-space:nowrap;display:flex;align-items:center;gap:5px;margin-bottom:-1px;position:relative}
+.tab:hover{color:var(--text)}.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab-badge{position:absolute;top:6px;right:4px;width:6px;height:6px;border-radius:50%;background:var(--teal)}
+.tc{display:none}.tc.active{display:block}
+.content{padding:24px 28px;flex:1;overflow-y:auto}
+
+/* ── ONBOARDING OVERLAY ── */
+.onboard-overlay{position:fixed;inset:0;background:rgba(30,27,58,.65);z-index:1000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px)}
+.onboard-box{background:#ffffff;border:1px solid var(--border);box-shadow:var(--shadow);border-radius:20px;padding:40px;max-width:520px;width:90%;text-align:center}
+.onboard-icon{font-size:48px;margin-bottom:16px}
+.onboard-box h2{font-family:var(--serif);font-size:24px;font-weight:600;margin-bottom:8px}
+.onboard-box p{font-size:14px;color:var(--t2);line-height:1.7;margin-bottom:24px}
+.onboard-dots{display:flex;justify-content:center;gap:6px;margin-bottom:24px}
+.odot{width:8px;height:8px;border-radius:50%;background:#d1d5db}
+.odot.active{background:linear-gradient(135deg,var(--accent),var(--teal))}
+.onboard-steps{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:28px;text-align:left}
+.ostep{background:#ede9fe;border:1px solid #c4b5fd;border-radius:var(--r);padding:14px}
+.ostep-icon{font-size:22px;margin-bottom:6px}
+.ostep-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px}
+.ostep-desc{font-size:11px;color:var(--t2);line-height:1.5}
+
+/* ── WIZARD ── */
+.wizard-steps{display:flex;gap:0;margin-bottom:28px;border-radius:var(--r);overflow:hidden;border:1px solid var(--border);background:#f3f4f6}
+.wstep{flex:1;padding:12px 8px;text-align:center;font-size:12px;color:var(--t3);background:#f8f7ff;border-right:1px solid var(--border);cursor:pointer;transition:all .2s;position:relative}
+.wstep:last-child{border-right:none}
+.wstep.active{background:#ede9fe;color:var(--accent)}
+.wstep.done{background:#e0f2fe;color:var(--teal)}
+.wstep-num{width:20px;height:20px;border-radius:50%;background:currentColor;color:#ffffff;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 4px;opacity:.7}
+.wstep.active .wstep-num,.wstep.done .wstep-num{opacity:1}
+.wizard-panel{display:none}.wizard-panel.active{display:block}
+.wizard-nav{display:flex;justify-content:space-between;align-items:center;margin-top:24px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ── PRESETS ── */
+.presets{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+.preset-card{background:#ffffff;border:2px solid var(--border);box-shadow:var(--shadow);border-radius:var(--rl);padding:16px;cursor:pointer;transition:all .2s;text-align:center}
+.preset-card:hover{border-color:var(--bhi)}
+.preset-card.selected{border-color:var(--accent);background:#ede9fe}
+.preset-icon{font-size:28px;margin-bottom:8px}
+.preset-name{font-size:14px;font-weight:500;color:var(--text);margin-bottom:4px}
+.preset-desc{font-size:11px;color:var(--t2);line-height:1.5;margin-bottom:8px}
+.preset-tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:center}
+.ptag{font-size:10px;padding:2px 7px;border-radius:10px;background:#ede9fe;color:var(--accent)}
+
+/* ── DISCIPLINE CARDS ── */
+.discipline-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-bottom:20px}
+.disc-card{background:#ffffff;border:2px solid var(--border);border-radius:var(--rl);padding:14px;cursor:pointer;transition:all .2s;text-align:center}
+.disc-card:hover{border-color:var(--bhi);background:#faf9ff}
+.disc-card.selected{border-color:var(--accent);background:#ede9fe}
+.disc-icon{font-size:26px;margin-bottom:6px}
+.disc-name{font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px}
+.disc-desc{font-size:10px;color:var(--t2);line-height:1.4}
+
+/* ── WORK TYPE PILLS ── */
+.work-types{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px}
+.wtype{padding:6px 13px;font-size:12px;border-radius:20px;border:1px solid var(--border);background:#ffffff;color:var(--t2);cursor:pointer;transition:all .15s}
+.wtype:hover{border-color:var(--accent);color:var(--accent);background:#ede9fe}
+.wtype.selected{border-color:var(--accent);background:var(--accent);color:#ffffff}
+
+/* ── COST ESTIMATOR ── */
+.cost-box{background:#e0f2fe;border:1px solid #bae6fd;border-radius:var(--r);padding:14px 18px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;margin-bottom:20px}
+.cost-item{display:flex;flex-direction:column;gap:2px}
+.cost-val{font-size:18px;font-weight:500;color:var(--teal);font-family:var(--serif)}
+.cost-lbl{font-size:11px;color:var(--t3)}
+.cost-sep{width:1px;height:36px;background:var(--border)}
+.cost-warn{font-size:11px;color:var(--t2);flex:1;min-width:160px}
+
+/* ── FORMS ── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-full{grid-column:1/-1}
+.field{display:flex;flex-direction:column;gap:4px;position:relative}
+label{font-size:12px;color:var(--t2);font-weight:500;display:flex;align-items:center;gap:5px}
+label .req{color:var(--red)}
+input[type=text],input[type=password],input[type=number],input[type=email],select,textarea{
+  width:100%;background:#ffffff;border:1px solid var(--border);border-radius:var(--r);
+  padding:8px 11px;font-size:13px;color:var(--text);font-family:var(--ff);transition:border-color .15s}
+input[type=number]{-moz-appearance:textfield}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(124,58,237,.12)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 9px center;padding-right:28px}
+textarea{resize:vertical;min-height:68px}
+.hint{font-size:10px;color:var(--t3);margin-top:3px}
+
+/* ── TOOLTIP ── */
+.tooltip-wrap{position:relative;display:inline-flex;align-items:center}
+.tip-icon{width:15px;height:15px;border-radius:50%;background:#f3f4f6;border:1px solid var(--border);font-size:9px;color:var(--t3);display:inline-flex;align-items:center;justify-content:center;cursor:help;flex-shrink:0}
+.tip-icon:hover{border-color:var(--accent);color:var(--accent)}
+.tip-box{position:absolute;left:20px;top:-4px;background:#ffffff;border:1px solid var(--border);box-shadow:var(--shadow-md);border-radius:8px;padding:10px 12px;font-size:11px;color:var(--t2);width:220px;z-index:100;line-height:1.5;display:none}
+.tooltip-wrap:hover .tip-box{display:block}
+
+/* ── SLIDER ── */
+.slider-row{display:flex;align-items:center;gap:11px}
+.slider-row input[type=range]{flex:1;background:transparent;border:none;padding:0;accent-color:var(--accent);height:4px}
+.slider-val{font-size:13px;font-weight:500;color:var(--accent);min-width:95px;text-align:right}
+
+/* ── TOGGLE ── */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.toggle-row:last-child{border-bottom:none}
+.tl{font-size:13px;color:var(--text)}.ts{font-size:11px;color:var(--t3)}
+.tsw{width:40px;height:22px;border-radius:11px;background:#d1d5db;border:1px solid #d1d5db;position:relative;cursor:pointer;transition:background .2s;flex-shrink:0}
+.tsw.on{background:linear-gradient(135deg,var(--accent),var(--teal));border-color:var(--accent)}
+.tsw::after{content:'';position:absolute;width:16px;height:16px;background:#fff;border-radius:50%;top:2px;left:2px;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.3)}
+.tsw.on::after{left:20px}
+
+/* ── SECTION HEAD ── */
+.sh{font-size:11px;font-weight:500;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:11px;margin-top:22px;padding-bottom:6px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px}
+.sh button{margin-left:auto;font-size:11px;color:var(--accent);cursor:pointer;background:none;border:none;font-family:var(--ff);padding:0}
+.sh button:hover{text-decoration:underline}
+.divider{height:1px;background:var(--border);margin:18px 0}
+.adv-toggle{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);cursor:pointer;padding:8px 0;user-select:none}
+.adv-toggle:hover{color:var(--text)}
+.adv-body{display:none}.adv-body.open{display:block}
+
+/* ── API KEY PANEL ── */
+.apikey-panel{background:#ede9fe;border:1px solid #c4b5fd;border-radius:var(--rl);padding:16px 20px;margin-bottom:20px}
+.apikey-header{display:flex;align-items:center;gap:9px;margin-bottom:10px}
+.apikey-header h3{font-size:14px;font-weight:500;color:var(--text)}
+.apikey-body{display:flex;gap:8px;align-items:flex-end}
+.apikey-body .field{flex:1}
+.privacy-note{font-size:11px;color:var(--teal);margin-top:6px;display:flex;align-items:center;gap:5px}
+
+/* ── SOURCE CARDS ── */
+.source-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sc{background:#ffffff;border:1px solid var(--border);border-radius:var(--r);padding:12px;transition:all .15s;box-shadow:var(--shadow)}
+.sc.on{border-color:var(--accent);background:#ede9fe}
+.sc-head{display:flex;align-items:center;gap:7px;margin-bottom:8px;cursor:pointer}
+.sc-head input[type=checkbox]{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+.sc-name{font-size:13px;font-weight:500;color:var(--text)}.sc-sub{font-size:10px;color:var(--t3)}
+.sc-ico{font-size:16px}
+.sc-field label{font-size:11px;color:var(--t3)}
+.sc-field input{margin-top:3px;padding:5px 9px;font-size:12px}
+
+/* ── AGENT TABLE ── */
+.at-wrap{background:#ffffff;border:1px solid var(--border);border-radius:var(--r);overflow:hidden;box-shadow:var(--shadow)}
+.at{width:100%;border-collapse:collapse;font-size:12px}
+.at th{text-align:left;padding:7px 11px;color:var(--t3);font-weight:500;border-bottom:1px solid var(--border);font-size:10px;text-transform:uppercase;letter-spacing:.06em;background:#f8f7ff}
+.at td{padding:6px 11px;border-bottom:1px solid var(--border);vertical-align:middle}
+.at tr:last-child td{border-bottom:none}.at tr:hover td{background:rgba(124,58,237,.02)}
+.at input[type=number]{width:75px;padding:4px 7px;font-size:12px;background:#ffffff;border:1px solid var(--border);border-radius:6px;color:var(--text)}
+.badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:500}
+.b-r{background:rgba(124,58,237,.1);color:var(--accent)}.b-w{background:rgba(8,145,178,.15);color:var(--teal)}
+.b-v{background:rgba(180,83,9,.15);color:var(--amber)}.b-p{background:rgba(21,128,61,.15);color:var(--green)}
+.b-a{background:rgba(220,38,38,.15);color:var(--red)}
+
+/* ── PIPELINE PHASES ── */
+.phases{display:flex;margin-bottom:16px}
+.ph{flex:1;text-align:center;padding:8px 4px;background:#f8f7ff;border:1px solid var(--border);border-right:none;font-size:10px;color:var(--t3);transition:all .3s}
+.ph:first-child{border-radius:var(--r) 0 0 var(--r)}.ph:last-child{border-right:1px solid var(--border);border-radius:0 var(--r) var(--r) 0}
+.ph.active{background:#ede9fe;border-color:var(--accent);color:var(--accent)}
+.ph.done{background:#e0f2fe;border-color:var(--teal);color:var(--teal)}
+.pnum{width:20px;height:20px;border-radius:50%;background:currentColor;color:#ffffff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center;margin:0 auto 3px;opacity:.5}
+.ph.active .pnum,.ph.done .pnum{opacity:1}
+
+/* ── HUMAN PROGRESS ── */
+.human-progress{background:#ffffff;border:1px solid var(--border);box-shadow:var(--shadow);border-radius:var(--r);padding:16px 18px;margin-bottom:14px;display:none}
+.human-progress.v{display:block}
+.hp-step{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.hp-step:last-child{margin-bottom:0}
+.hp-dot{width:8px;height:8px;border-radius:50%;background:#d1d5db;flex-shrink:0}
+.hp-dot.done{background:var(--teal)}.hp-dot.active{background:linear-gradient(135deg,var(--accent),var(--teal))}
+.hp-text{font-size:13px;color:var(--t3)}.hp-text.done{color:var(--teal)}.hp-text.active{color:var(--text)}
+.prog-bar-wrap{height:3px;background:#e5e7eb;border-radius:2px;margin-top:12px}
+.prog-fill{height:100%;background:linear-gradient(135deg,var(--accent),var(--teal));border-radius:2px;transition:width .5s ease;width:0%}
+.log-wrap{margin-top:10px}
+.log-toggle{font-size:11px;color:var(--t3);cursor:pointer;display:flex;align-items:center;gap:4px;padding:4px 0;user-select:none}
+.log-toggle:hover{color:var(--t2)}
+.log{background:#f8f7ff;border:1px solid var(--border);border-radius:var(--r);padding:10px 12px;font-size:11px;max-height:150px;overflow-y:auto;color:var(--t2);font-family:'Courier New',monospace;display:none}
+.log.open{display:block}
+.ll{padding:1px 0;border-bottom:1px solid rgba(255,255,255,.02)}
+.ll.ok{color:#059669}.ll.info{color:var(--accent)}.ll.warn{color:var(--amber)}.ll.err{color:var(--red)}
+
+/* ── OUTPUT AREA ── */
+.out-area{background:#ffffff;border:1px solid var(--border);border-radius:var(--rl);padding:24px 28px;font-size:14px;box-shadow:var(--shadow);line-height:1.8;color:var(--text);white-space:pre-wrap;min-height:200px}
+.placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:240px;color:var(--t3);gap:9px;text-align:center}
+.placeholder .bi{font-size:36px}
+.placeholder p{font-size:13px;max-width:260px;line-height:1.6}
+.export-row{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
+.section-block{margin-bottom:0}
+.section-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:#f8f7ff;border:1px solid var(--border);border-radius:var(--r) var(--r) 0 0;cursor:pointer;user-select:none}
+.section-title-text{font-size:14px;font-weight:500;color:var(--text)}
+.section-actions{display:flex;gap:6px;align-items:center}
+.section-body{border:1px solid var(--border);border-top:none;border-radius:0 0 var(--r) var(--r);padding:16px;background:#ffffff;margin-bottom:8px}
+.section-body textarea{width:100%;background:transparent;border:none;color:var(--text);font-family:var(--ff);font-size:13px;line-height:1.7;resize:vertical;min-height:120px;outline:none;padding:0}
+.regen-panel{background:#fefce8;border:1px solid #d4a060;border-radius:var(--r);padding:12px;margin-top:8px;display:none}
+.regen-panel.open{display:block}
+.regen-panel textarea{width:100%;background:#f7f8fa;border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:var(--ff);font-size:12px;padding:7px 10px;resize:none;height:56px;outline:none}
+.regen-panel textarea:focus{border-color:var(--accent)}
+
+/* ── STATS ── */
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.stat{background:#ffffff;border:1px solid var(--border);border-radius:var(--r);padding:11px 14px;box-shadow:var(--shadow)}
+.sv{font-size:20px;font-weight:500;color:var(--accent);font-family:var(--serif)}
+.sl{font-size:11px;color:var(--t3);margin-top:1px}
+
+/* ── HISTORY ── */
+.history-list{display:flex;flex-direction:column;gap:8px}
+.hist-card{background:#ffffff;border:1px solid var(--border);border-radius:var(--r);padding:12px 16px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.hist-card:hover{border-color:var(--bhi)}
+.hist-info{flex:1;min-width:0}
+.hist-title{font-size:13px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hist-meta{font-size:11px;color:var(--t3);margin-top:2px}
+.hist-actions{display:flex;gap:6px;flex-shrink:0}
+
+/* ── GAP CARDS ── */
+.gaps-list{display:flex;flex-direction:column;gap:10px}
+.gap-card{background:#ffffff;border:1px solid var(--border);border-left:3px solid var(--amber);box-shadow:var(--shadow);border-radius:var(--r);padding:12px 14px}
+.gap-card h4{font-size:13px;font-weight:500;color:var(--amber);margin-bottom:3px}
+.gap-card p{font-size:12px;color:var(--t2);line-height:1.6}
+
+/* ── QUALITY BAR ── */
+.qbar{background:#e0f2fe;border:1px solid #bae6fd;border-radius:var(--r);padding:10px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:14px}
+.qb-item{display:flex;align-items:center;gap:5px;color:var(--t2)}.qb-item strong{color:var(--teal)}
+
+/* ── INFO BOX ── */
+.ibox{background:#ede9fe;border:1px solid #c4b5fd;border-radius:var(--r);padding:9px 13px;font-size:12px;color:var(--t2);display:flex;align-items:flex-start;gap:7px;margin-bottom:14px}
+
+/* ── ANIMATIONS ── */
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}.pulsing{animation:pulse 1.5s infinite}
+@keyframes fi{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}.fi{animation:fi .3s ease}
+@keyframes spin{to{transform:rotate(360deg)}}.spinning{animation:spin 1s linear infinite}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:#f3f4f6}
+::-webkit-scrollbar-thumb{background:var(--bhi);border-radius:2px}
+
+/* ── RESPONSIVE ── */
+@media(max-width:860px){
+  .sidebar{display:none}.topbar,.content{padding-left:16px;padding-right:16px}
+  .form-grid,.source-grid,.presets,.discipline-grid{grid-template-columns:1fr}
+  .stats-row{grid-template-columns:1fr 1fr}.tabs{padding:0 16px}
+  .onboard-steps{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     ONBOARDING OVERLAY
+══════════════════════════════════════════════ -->
+<div class="onboard-overlay" id="onboardOverlay">
+  <div class="onboard-box">
+    <div id="ob1">
+      <div class="onboard-icon">📜</div>
+      <h2>Bienvenido a Humanitas</h2>
+      <p>Genera revisiones académicas en Ciencias Sociales, Humanidades y Ciencias Jurídicas de forma automática. Conecta con las principales bases de datos de estas disciplinas y obtén un trabajo completo en minutos.</p>
+      <div class="onboard-steps">
+        <div class="ostep"><div class="ostep-icon">🔍</div><div class="ostep-title">Fuentes especializadas</div><div class="ostep-desc">JSTOR, SSRN, PhilPapers, HeinOnline, Dialnet, OpenAlex y más repositorios para humanidades y derecho</div></div>
+        <div class="ostep"><div class="ostep-icon">🤖</div><div class="ostep-title">Agentes adaptativos</div><div class="ostep-desc">Pipeline de 5 fases calibrado para análisis hermenéutico, interpretación jurídica y crítica social</div></div>
+        <div class="ostep"><div class="ostep-icon">📄</div><div class="ostep-title">Exporta en 4 formatos</div><div class="ostep-desc">Word, LaTeX, Markdown o texto plano con citas en MLA, Chicago, APA o Harvard</div></div>
+      </div>
+      <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="nextOnboard(2)">Continuar →</button>
+    </div>
+    <div id="ob2" style="display:none">
+      <div class="onboard-icon">🔑</div>
+      <h2>Tu API key es tuya</h2>
+      <p>Humanitas usa la API de OpenAI directamente desde <strong>tu navegador</strong>. Tu clave nunca pasa por ningún servidor externo.</p>
+      <div style="background:#e0f2fe;border:1px solid #bae6fd;border-radius:var(--r);padding:14px;text-align:left;margin-bottom:20px;font-size:13px;color:var(--t2);line-height:1.7">
+        ✅ La key va directamente de tu dispositivo a api.openai.com<br>
+        ✅ Guardada opcionalmente en <code style="color:var(--accent)">localStorage</code><br>
+        ✅ Puedes borrarla en cualquier momento<br>
+        ✅ Nadie más puede verla
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" style="flex:1" onclick="nextOnboard(1)">← Atrás</button>
+        <button class="btn btn-primary" style="flex:2;padding:12px" onclick="nextOnboard(3)">Continuar →</button>
+      </div>
+    </div>
+    <div id="ob3" style="display:none">
+      <div class="onboard-icon">⚡</div>
+      <h2>Listo para empezar</h2>
+      <p>Necesitarás una API key de OpenAI. Puedes obtenerla en <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent)">platform.openai.com/api-keys</a>.</p>
+      <div style="background:#f8f7ff;border:1px solid var(--border);border-radius:var(--r);padding:14px;text-align:left;margin-bottom:20px;font-size:13px;color:var(--t2);line-height:1.7">
+        💡 <strong style="color:var(--text)">Coste estimado:</strong> Una revisión estándar (8000 palabras) con gpt-4o-mini cuesta aproximadamente <strong style="color:var(--amber)">$0.05 – $0.15</strong>.
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" style="flex:1" onclick="nextOnboard(2)">← Atrás</button>
+        <button class="btn btn-primary" style="flex:2;padding:12px" onclick="closeOnboard()">🚀 Comenzar</button>
+      </div>
+    </div>
+    <div class="onboard-dots" style="margin-top:20px;margin-bottom:0">
+      <div class="odot active" id="od1"></div>
+      <div class="odot" id="od2"></div>
+      <div class="odot" id="od3"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════════════ -->
+<div class="app">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="logo">
+    <div class="logo-row">
+      <div class="logo-icon">📜</div>
+      <div><h1>Humanitas</h1><span>Review Generator</span></div>
+    </div>
+  </div>
+  <div class="snav">Pipeline</div>
+  <div class="ni-item active" onclick="showMain('wizard')"><span class="ni">✨</span> Nueva revisión</div>
+  <div class="ni-item" onclick="showMain('output')"><span class="ni">📄</span> Artículo generado</div>
+  <div class="ni-item" onclick="showMain('gaps')"><span class="ni">🔍</span> Lagunas detectadas</div>
+  <div class="ni-item" onclick="showMain('history')"><span class="ni">🕓</span> Historial</div>
+  <div class="snav">Avanzado</div>
+  <div class="ni-item" onclick="showMain('agents')"><span class="ni">🤖</span> Agentes &amp; Tokens</div>
+  <div class="ni-item" onclick="showMain('sources')"><span class="ni">📚</span> Fuentes &amp; Límites</div>
+  <div class="snav">Recursos</div>
+  <div class="ni-item" onclick="window.open('https://platform.openai.com/api-keys','_blank')"><span class="ni">🔑</span> Obtener API Key</div>
+  <div class="ni-item" onclick="window.open('https://platform.openai.com/usage','_blank')"><span class="ni">💳</span> Ver consumo OpenAI</div>
+  <div class="ni-item" onclick="openOnboard()"><span class="ni">❓</span> Tutorial</div>
+  <div class="sidebar-footer">
+    <div class="user-row">
+      <div class="avatar" id="avI">--</div>
+      <div><div class="un" id="avL">Sin configurar</div><div class="up">key local · nunca compartida</div></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <div class="topbar">
+    <div>
+      <h2 id="topbarTitle">Nueva revisión</h2>
+      <p id="topbarSub">Configura tu tema y genera un artículo académico completo</p>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn" onclick="showMain('history')" title="Historial">🕓 Historial</button>
+      <button class="btn btn-stop" id="btnStop" onclick="stopGeneration()" disabled>⏹ Parar</button>
+      <button class="btn btn-primary" id="btnGen" onclick="startGeneration()">▶ Generar</button>
+    </div>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs" id="mainTabs">
+    <div class="tab active" id="tab-wizard"  onclick="showMain('wizard')">✨ Nueva revisión</div>
+    <div class="tab"       id="tab-output"  onclick="showMain('output')">📄 Artículo <span id="outputBadge" class="tab-badge" style="display:none"></span></div>
+    <div class="tab"       id="tab-gaps"    onclick="showMain('gaps')">🔍 Lagunas</div>
+    <div class="tab"       id="tab-history" onclick="showMain('history')">🕓 Historial</div>
+    <div class="tab"       id="tab-agents"  onclick="showMain('agents')">🤖 Agentes</div>
+    <div class="tab"       id="tab-sources" onclick="showMain('sources')">📚 Fuentes</div>
+  </div>
+
+  <!-- ══════ PANEL: WIZARD ══════ -->
+  <div class="tc active content" id="tc-wizard">
+
+    <!-- API KEY -->
+    <div class="apikey-panel">
+      <div class="apikey-header">
+        <span style="font-size:17px">🔑</span>
+        <h3>OpenAI API Key</h3>
+        <span style="margin-left:auto;font-size:11px;background:rgba(8,145,178,.15);color:var(--teal);padding:3px 9px;border-radius:20px;border:1px solid rgba(8,145,178,.3)">🔒 Solo en tu navegador</span>
+      </div>
+      <div class="apikey-body">
+        <div class="field" style="flex:1">
+          <label>API Key <span class="req">*</span></label>
+          <input type="password" id="apiKey" placeholder="sk-..." oninput="onKeyChange()">
+        </div>
+        <button class="btn" onclick="toggleKeyVis()">👁</button>
+        <button class="btn btn-danger" id="btnForget" onclick="forgetKey()" style="display:none">🗑</button>
+      </div>
+      <div class="privacy-note">✅ Las llamadas van directamente de tu navegador a api.openai.com. Nunca pasan por ningún servidor nuestro.</div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:7px">
+        <input type="checkbox" id="saveKey" style="width:13px;height:13px;accent-color:var(--accent);cursor:pointer" onchange="onSaveKey()">
+        <label for="saveKey" style="font-size:12px;color:var(--t3);cursor:pointer;font-weight:400">Guardar en localStorage (persiste entre sesiones)</label>
+      </div>
+    </div>
+
+    <!-- WIZARD STEPS -->
+    <div class="wizard-steps">
+      <div class="wstep active" id="ws1" onclick="goWizard(1)"><div class="wstep-num">1</div>Tema</div>
+      <div class="wstep" id="ws2" onclick="goWizard(2)"><div class="wstep-num">2</div>Fuentes</div>
+      <div class="wstep" id="ws3" onclick="goWizard(3)"><div class="wstep-num">3</div>Opciones</div>
+      <div class="wstep" id="ws4" onclick="goWizard(4)"><div class="wstep-num">4</div>Generar</div>
+    </div>
+
+    <!-- STEP 1: TEMA + DISCIPLINA + TIPO DE TRABAJO -->
+    <div class="wizard-panel active" id="wp1">
+
+      <div class="sh">⚡ Modo de generación</div>
+      <div class="presets">
+        <div class="preset-card" id="preset-fast" onclick="applyPreset('fast')">
+          <div class="preset-icon">⚡</div>
+          <div class="preset-name">Borrador rápido</div>
+          <div class="preset-desc">Solo las 3 primeras fases. Ideal para explorar un tema.</div>
+          <div class="preset-tags"><span class="ptag">~5 min</span><span class="ptag">4.000 palabras</span></div>
+        </div>
+        <div class="preset-card selected" id="preset-std" onclick="applyPreset('std')">
+          <div class="preset-icon">📝</div>
+          <div class="preset-name">Revisión estándar</div>
+          <div class="preset-desc">Pipeline completo. Balance perfecto entre calidad y tiempo.</div>
+          <div class="preset-tags"><span class="ptag">~15 min</span><span class="ptag">8.000 palabras</span></div>
+        </div>
+        <div class="preset-card" id="preset-deep" onclick="applyPreset('deep')">
+          <div class="preset-icon">🔬</div>
+          <div class="preset-name">Revisión exhaustiva</div>
+          <div class="preset-desc">Máxima cobertura. Todas las fuentes y validación completa.</div>
+          <div class="preset-tags"><span class="ptag">~30 min</span><span class="ptag">12.000 palabras</span></div>
+        </div>
+      </div>
+
+      <div class="sh">🎓 Disciplina principal</div>
+      <div class="discipline-grid" id="disciplineGrid">
+        <div class="disc-card selected" id="disc-social" onclick="selectDisc('social')">
+          <div class="disc-icon">🌍</div>
+          <div class="disc-name">Ciencias Sociales</div>
+          <div class="disc-desc">Sociología, Economía, Ciencia Política, Antropología, Psicología Social</div>
+        </div>
+        <div class="disc-card" id="disc-human" onclick="selectDisc('human')">
+          <div class="disc-icon">📚</div>
+          <div class="disc-name">Humanidades</div>
+          <div class="disc-desc">Historia, Filosofía, Literatura, Lingüística, Arte, Arqueología</div>
+        </div>
+        <div class="disc-card" id="disc-legal" onclick="selectDisc('legal')">
+          <div class="disc-icon">⚖️</div>
+          <div class="disc-name">Ciencias Jurídicas</div>
+          <div class="disc-desc">Derecho Privado, Público, Internacional, Constitucional, Penal</div>
+        </div>
+      </div>
+
+      <div class="sh">📋 Tipo de trabajo <span style="font-weight:400;color:var(--t3);font-size:10px;text-transform:none;letter-spacing:0">(elige uno)</span></div>
+      <div class="work-types" id="workTypesContainer">
+        <!-- populated by JS based on discipline -->
+      </div>
+
+      <div class="sh">🔬 Tu tema de investigación</div>
+      <div class="form-grid">
+        <div class="field form-full">
+          <label>Tema de la revisión <span class="req">*</span></label>
+          <input type="text" id="topic" placeholder="Ej: La criminalización de la protesta social en América Latina, El concepto de dignidad en Kant, Tutela judicial efectiva en el TJUE..." style="font-size:15px;padding:11px 14px">
+        </div>
+        <div class="field">
+          <label>Idioma de salida</label>
+          <select id="lang">
+            <option value="Spanish">Español</option>
+            <option value="English">English</option>
+            <option value="Portuguese">Português</option>
+            <option value="French">Français</option>
+            <option value="German">Deutsch</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Estilo de citas</label>
+          <select id="citeStyle">
+            <option value="Chicago">Chicago 17</option>
+            <option value="MLA">MLA 9</option>
+            <option value="APA">APA 7</option>
+            <option value="Harvard">Harvard</option>
+            <option value="Vancouver">Vancouver</option>
+            <option value="IEEE">IEEE</option>
+          </select>
+        </div>
+        <div class="field form-full">
+          <label>Palabras clave adicionales <span style="font-weight:400;color:var(--t3)">(opcional)</span></label>
+          <input type="text" id="keywords" placeholder="Ej: derecho comparado, positivismo jurídico, sociología crítica...">
+        </div>
+      </div>
+      <div class="wizard-nav">
+        <span class="hint">Paso 1 de 3</span>
+        <button class="btn btn-primary" onclick="goWizard(2)">Siguiente: Fuentes →</button>
+      </div>
+    </div>
+
+    <!-- STEP 2: SOURCES -->
+    <div class="wizard-panel" id="wp2">
+      <div class="sh">📡 Fuentes académicas especializadas</div>
+      <div class="source-grid" style="margin-bottom:16px">
+
+        <div class="sc on" id="sc-oa"><div class="sc-head" onclick="toggleSrc('oa')"><input type="checkbox" id="chk-oa" checked><span class="sc-ico">🌐</span><div><div class="sc-name">OpenAlex</div><div class="sc-sub">250M papers · cubre humanidades · OA</div></div></div><div class="sc-field"><label>Artículos máx.</label><input type="number" id="lim-oa" value="30" min="5" max="200" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px"></div></div>
+
+        <div class="sc on" id="sc-ss"><div class="sc-head" onclick="toggleSrc('ss')"><input type="checkbox" id="chk-ss" checked><span class="sc-ico">🔭</span><div><div class="sc-name">Semantic Scholar</div><div class="sc-sub">220M papers · Ciencias Sociales · CS</div></div></div><div class="sc-field"><label>Artículos máx.</label><input type="number" id="lim-ss" value="25" min="5" max="200" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px"></div></div>
+
+        <div class="sc on" id="sc-cr"><div class="sc-head" onclick="toggleSrc('cr')"><input type="checkbox" id="chk-cr" checked><span class="sc-ico">🔗</span><div><div class="sc-name">CrossRef</div><div class="sc-sub">165M registros · revistas Humanidades</div></div></div><div class="sc-field"><label>Artículos máx.</label><input type="number" id="lim-cr" value="20" min="5" max="100" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px"></div></div>
+
+        <div class="sc on" id="sc-ax"><div class="sc-head" onclick="toggleSrc('ax')"><input type="checkbox" id="chk-ax" checked><span class="sc-ico">📐</span><div><div class="sc-name">arXiv (econ/cs)</div><div class="sc-sub">Preprints Economía, Sociología cuantitativa</div></div></div><div class="sc-field"><label>Artículos máx.</label><input type="number" id="lim-ax" value="15" min="5" max="100" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px"></div></div>
+
+        <div class="sc" id="sc-ep"><div class="sc-head" onclick="toggleSrc('ep')"><input type="checkbox" id="chk-ep"><span class="sc-ico">🇪🇺</span><div><div class="sc-name">Europe PMC (Psicología)</div><div class="sc-sub">Literatura gris · Psicología Social y clínica</div></div></div><div class="sc-field"><label>Artículos máx.</label><input type="number" id="lim-ep" value="15" min="5" max="100" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px"></div></div>
+
+        <div class="sc" id="sc-pm"><div class="sc-head" onclick="toggleSrc('pm')"><input type="checkbox" id="chk-pm"><span class="sc-ico">🧠</span><div><div class="sc-name">PubMed (Psicología)</div><div class="sc-sub">Solo Psicología, Salud Mental, Neurociencia Social</div></div></div><div class="sc-field"><label>Artículos máx.</label><input type="number" id="lim-pm" value="15" min="5" max="100" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px"></div></div>
+
+      </div>
+      <div class="ibox"><span>💡</span><span>Para Ciencias Jurídicas, OpenAlex y CrossRef incluyen revistas de Derecho. JSTOR y SSRN no tienen APIs abiertas, pero el pipeline de IA complementa con análisis conceptual.</span></div>
+      <div class="wizard-nav">
+        <button class="btn" onclick="goWizard(1)">← Atrás</button>
+        <button class="btn btn-primary" onclick="goWizard(3)">Siguiente: Opciones →</button>
+      </div>
+    </div>
+
+    <!-- STEP 3: OPTIONS -->
+    <div class="wizard-panel" id="wp3">
+      <div class="sh">🎛️ Opciones de generación</div>
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="field">
+          <label>Extensión objetivo
+            <div class="tooltip-wrap"><span class="tip-icon">?</span><div class="tip-box">Número de palabras objetivo. Valores más altos = mayor coste y tiempo, pero mayor profundidad argumentativa.</div></div>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="wc" min="2000" max="15000" step="500" value="8000" oninput="document.getElementById('wcv').textContent=parseInt(this.value).toLocaleString()+' palabras';updateEstimate()">
+            <span class="slider-val" id="wcv">8,000 palabras</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Cobertura temporal
+            <div class="tooltip-wrap"><span class="tip-icon">?</span><div class="tip-box">Rango de años. En Humanidades es frecuente revisar fuentes históricas más antiguas; considera ampliar el rango.</div></div>
+          </label>
+          <div class="slider-row">
+            <input type="range" id="years" min="3" max="50" step="1" value="20" oninput="document.getElementById('yearsv').textContent='Últimos '+this.value+' años'">
+            <span class="slider-val" id="yearsv">Últimos 20 años</span>
+          </div>
+        </div>
+        <div class="field">
+          <label>Modelo OpenAI
+            <div class="tooltip-wrap"><span class="tip-icon">?</span><div class="tip-box">gpt-4o-mini: rápido y económico. gpt-4o: mayor calidad argumentativa, recomendado para análisis jurídico complejo.</div></div>
+          </label>
+          <select id="model" onchange="updateEstimate()">
+            <option value="gpt-4o-mini">gpt-4o-mini — rápido y económico ✅</option>
+            <option value="gpt-4o">gpt-4o — alta calidad argumentativa</option>
+            <option value="gpt-4-turbo">gpt-4-turbo</option>
+            <option value="gpt-3.5-turbo">gpt-3.5-turbo — muy económico</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Instrucciones especiales
+            <div class="tooltip-wrap"><span class="tip-icon">?</span><div class="tip-box">Ej: "análisis comparado España-Francia", "perspectiva feminista", "enfoque iusnaturalista", "solo doctrina española"...</div></div>
+          </label>
+          <input type="text" id="instructions" placeholder="Ej: perspectiva crítica, análisis comparado, doctrina española...">
+        </div>
+      </div>
+
+      <!-- TOGGLES -->
+      <div class="sh">🤖 Agentes adicionales</div>
+      <div>
+        <div class="toggle-row"><div><div class="tl">🔍 Detección de lagunas doctrinales (gap_detector)</div><div class="ts">Identifica vacíos argumentativos y líneas de investigación abiertas</div></div><div class="tsw on" id="tog-gaps" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">📈 Análisis bibliométrico (data_analyst)</div><div class="ts">Tendencias por año, revistas más citadas, autores de referencia</div></div><div class="tsw on" id="tog-biblio" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">📐 Coherencia argumentativa (thread)</div><div class="ts">Revisa la continuidad lógica entre secciones</div></div><div class="tsw on" id="tog-thread" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">🎯 Resumen ejecutivo + palabras clave (enhancer)</div><div class="ts">Abstract 250p, keywords y 5 contribuciones principales</div></div><div class="tsw on" id="tog-enhancer" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">📝 Metodología de revisión (methodology)</div><div class="ts">Sección de metodología con criterios de búsqueda y selección</div></div><div class="tsw on" id="tog-prisma" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">📊 Síntesis de hallazgos (results_synthesizer)</div><div class="ts">Resumen de 5-7 puntos clave para no especialistas</div></div><div class="tsw on" id="tog-synth" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">⚡ Modo rápido (salta fases 4-5)</div><div class="ts">Sin validación ni polish — más rápido, menor calidad</div></div><div class="tsw" id="tog-fast" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+      </div>
+      <div class="wizard-nav">
+        <button class="btn" onclick="goWizard(2)">← Atrás</button>
+        <button class="btn btn-primary" onclick="goWizard(4)">Ver resumen →</button>
+      </div>
+    </div>
+
+    <!-- STEP 4: SUMMARY + LAUNCH -->
+    <div class="wizard-panel" id="wp4">
+      <div class="sh">💰 Estimación antes de generar</div>
+      <div class="cost-box" id="costBox">
+        <div class="cost-item"><div class="cost-val" id="estTime">~15 min</div><div class="cost-lbl">Tiempo estimado</div></div>
+        <div class="cost-sep"></div>
+        <div class="cost-item"><div class="cost-val" id="estCost">~$0.08</div><div class="cost-lbl">Coste estimado</div></div>
+        <div class="cost-sep"></div>
+        <div class="cost-item"><div class="cost-val" id="estWords">8.000</div><div class="cost-lbl">Palabras objetivo</div></div>
+        <div class="cost-sep"></div>
+        <div class="cost-item"><div class="cost-val" id="estSources">4</div><div class="cost-lbl">Fuentes activas</div></div>
+        <div class="cost-warn">⚠️ El coste real depende de los artículos encontrados. El modelo <span id="estModel">gpt-4o-mini</span> es el más económico.</div>
+      </div>
+
+      <div class="sh">🚦 Estado del pipeline</div>
+      <div class="phases">
+        <div class="ph" id="ph1"><div class="pnum">1</div>Research</div>
+        <div class="ph" id="ph2"><div class="pnum">2</div>Structure</div>
+        <div class="ph" id="ph3"><div class="pnum">3</div>Writing</div>
+        <div class="ph" id="ph4"><div class="pnum">4</div>Validation</div>
+        <div class="ph" id="ph5"><div class="pnum">5</div>Polish</div>
+      </div>
+
+      <div class="human-progress" id="humanProgress">
+        <div id="hpSteps"></div>
+        <div class="prog-bar-wrap"><div class="prog-fill" id="progFill"></div></div>
+      </div>
+
+      <div class="log-wrap">
+        <div class="log-toggle" onclick="toggleLog()">▶ Ver log técnico <span id="logCount" style="color:var(--accent)"></span></div>
+        <div class="log" id="logPanel"><div class="ll info">Humanitas listo.</div></div>
+      </div>
+
+      <div class="wizard-nav" style="margin-top:16px">
+        <button class="btn" onclick="goWizard(3)">← Editar opciones</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-stop" id="btnStopWizard" onclick="stopGeneration()" disabled>⏹ Parar</button>
+          <button class="btn btn-primary" id="btnGenWizard" onclick="startGeneration()" style="padding:10px 28px;font-size:14px">▶ Generar revisión</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /wizard -->
+
+  <!-- ══════ PANEL: OUTPUT ══════ -->
+  <div class="tc content" id="tc-output">
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="stat"><div class="sv" id="sPapers">—</div><div class="sl">Fuentes</div></div>
+      <div class="stat"><div class="sv" id="sWords">—</div><div class="sl">Palabras</div></div>
+      <div class="stat"><div class="sv" id="sSecs">—</div><div class="sl">Secciones</div></div>
+      <div class="stat"><div class="sv" id="sTime">—</div><div class="sl">Tiempo</div></div>
+      <div class="stat"><div class="sv" id="sScore">—</div><div class="sl">Calidad</div></div>
+    </div>
+    <div class="qbar fi" id="qualityBar" style="display:none">
+      <div class="qb-item">✅ Score: <strong id="qbScore">—</strong></div>
+      <div class="qb-item">📚 <strong id="qbPapers">—</strong> fuentes</div>
+      <div class="qb-item">📝 <strong id="qbSecs">—</strong> secciones</div>
+      <div class="qb-item">⏱ <strong id="qbTime">—</strong></div>
+      <div class="qb-item" id="partialBadge" style="display:none">⚠️ <strong style="color:var(--amber)">Borrador parcial guardado</strong></div>
+    </div>
+    <div id="outputArea">
+      <div class="placeholder"><div class="bi">📋</div><p>El artículo generado aparecerá aquí.<br>Pulsa <strong>Generar revisión</strong> para empezar.</p></div>
+    </div>
+    <div class="export-row" id="exportRow" style="display:none">
+      <button class="btn btn-success" onclick="exportMarkdown()">⬇ Markdown (.md)</button>
+      <button class="btn btn-primary" onclick="exportWord()">⬇ Word (.doc)</button>
+      <button class="btn btn-amber"   onclick="exportLatex()">⬇ LaTeX (.tex)</button>
+      <button class="btn"             onclick="exportTxt()">⬇ Texto (.txt)</button>
+      <button class="btn"             onclick="copyClipboard()">📋 Copiar todo</button>
+    </div>
+  </div>
+
+  <!-- ══════ PANEL: GAPS ══════ -->
+  <div class="tc content" id="tc-gaps">
+    <div id="gapsArea">
+      <div class="placeholder"><div class="bi">🔍</div><p>Las lagunas doctrinales detectadas por el agente <strong>gap_detector</strong> aparecerán aquí.</p></div>
+    </div>
+  </div>
+
+  <!-- ══════ PANEL: HISTORY ══════ -->
+  <div class="tc content" id="tc-history">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+      <div><div style="font-size:15px;font-weight:500">Historial de revisiones</div><div style="font-size:12px;color:var(--t3);margin-top:2px">Guardadas localmente en tu navegador · máx. 5</div></div>
+      <button class="btn btn-danger" onclick="clearHistory()" style="font-size:12px">🗑 Borrar historial</button>
+    </div>
+    <div id="historyList"><div class="placeholder"><div class="bi">🕓</div><p>Aún no hay revisiones guardadas.</p></div></div>
+  </div>
+
+  <!-- ══════ PANEL: AGENTS ══════ -->
+  <div class="tc content" id="tc-agents">
+    <div class="ibox"><span>ℹ️</span><span>Configura el máximo de tokens por agente. Más tokens = respuestas más largas, mayor coste.</span></div>
+    <div class="sh">🤖 Agentes del pipeline <button onclick="resetAgentDefaults()">↺ Restaurar defaults</button></div>
+    <div class="at-wrap"><table class="at"><thead><tr><th style="width:150px">Agente</th><th style="width:110px">Fase</th><th>Rol</th><th style="width:90px">Max tokens</th></tr></thead><tbody id="agentTbody"></tbody></table></div>
+    <div class="divider"></div>
+    <div class="sh">🌡️ Parámetros globales</div>
+    <div class="form-grid" style="max-width:520px">
+      <div class="field">
+        <label>Temperatura</label>
+        <div class="slider-row">
+          <input type="range" id="temperature" min="0" max="1" step="0.05" value="0.7" oninput="document.getElementById('tempv').textContent=parseFloat(this.value).toFixed(2)">
+          <span class="slider-val" id="tempv">0.70</span>
+        </div>
+      </div>
+      <div class="field">
+        <label>Reintentos por agente</label>
+        <input type="number" id="maxRetries" value="3" min="1" max="5">
+      </div>
+      <div class="field">
+        <label>Queries paralelas (scout)</label>
+        <input type="number" id="maxQueries" value="4" min="1" max="6">
+      </div>
+      <div class="field">
+        <label>Top fuentes al contexto</label>
+        <input type="number" id="topPapers" value="25" min="10" max="60">
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════ PANEL: SOURCES ══════ -->
+  <div class="tc content" id="tc-sources">
+    <div class="ibox"><span>ℹ️</span><span>Configura límites detallados de cada fuente. Los cambios se sincronizan con el wizard.</span></div>
+    <div class="sh">📡 Fuentes académicas — configuración avanzada</div>
+    <div class="source-grid" style="margin-bottom:16px">
+      <div class="sc on" id="sc2-oa"><div class="sc-head" onclick="syncSrc('oa')"><input type="checkbox" id="chk2-oa" checked><span class="sc-ico">🌐</span><div><div class="sc-name">OpenAlex</div><div class="sc-sub">250M papers · Humanidades incluidas</div></div></div><div class="sc-field"><label>Máx. por query</label><input type="number" id="lim2-oa" value="30" min="5" max="200" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px" oninput="syncLim('oa',this.value)"></div><div class="hint" style="margin-top:5px">Cubre JSTOR indexado, HAL, Redalyc parcialmente</div></div>
+      <div class="sc on" id="sc2-ss"><div class="sc-head" onclick="syncSrc('ss')"><input type="checkbox" id="chk2-ss" checked><span class="sc-ico">🔭</span><div><div class="sc-name">Semantic Scholar</div><div class="sc-sub">220M · CS, Economía, Psicología</div></div></div><div class="sc-field"><label>Máx. por query</label><input type="number" id="lim2-ss" value="25" min="5" max="200" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px" oninput="syncLim('ss',this.value)"></div><div class="hint" style="margin-top:5px">API pública · clave interna · buen recall en Derecho</div></div>
+      <div class="sc on" id="sc2-cr"><div class="sc-head" onclick="syncSrc('cr')"><input type="checkbox" id="chk2-cr" checked><span class="sc-ico">🔗</span><div><div class="sc-name">CrossRef</div><div class="sc-sub">165M · Springer, Wiley, Oxford UP</div></div></div><div class="sc-field"><label>Máx. por query</label><input type="number" id="lim2-cr" value="20" min="5" max="100" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px" oninput="syncLim('cr',this.value)"></div><div class="hint" style="margin-top:5px">Cubre revistas de Humanidades y Derecho · DOI canónico</div></div>
+      <div class="sc on" id="sc2-ax"><div class="sc-head" onclick="syncSrc('ax')"><input type="checkbox" id="chk2-ax" checked><span class="sc-ico">📐</span><div><div class="sc-name">arXiv (econ/cs)</div><div class="sc-sub">Preprints Economía, Ciencias Sociales cuantitativas</div></div></div><div class="sc-field"><label>Máx. por query</label><input type="number" id="lim2-ax" value="15" min="5" max="100" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px" oninput="syncLim('ax',this.value)"></div><div class="hint" style="margin-top:5px">Sección econ y cs · preprints recientes</div></div>
+      <div class="sc" id="sc2-ep"><div class="sc-head" onclick="syncSrc('ep')"><input type="checkbox" id="chk2-ep"><span class="sc-ico">🇪🇺</span><div><div class="sc-name">Europe PMC</div><div class="sc-sub">Psicología Social, Salud Mental</div></div></div><div class="sc-field"><label>Máx. por query</label><input type="number" id="lim2-ep" value="15" min="5" max="100" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px" oninput="syncLim('ep',this.value)"></div><div class="hint" style="margin-top:5px">EBI · literature gris · útil para Psicología Social</div></div>
+      <div class="sc" id="sc2-pm"><div class="sc-head" onclick="syncSrc('pm')"><input type="checkbox" id="chk2-pm"><span class="sc-ico">🧠</span><div><div class="sc-name">PubMed (Psicología)</div><div class="sc-sub">Solo para temas de Psicología y Salud Mental</div></div></div><div class="sc-field"><label>Máx. por query</label><input type="number" id="lim2-pm" value="15" min="5" max="100" style="width:100%;margin-top:3px;padding:5px 9px;font-size:12px" oninput="syncLim('pm',this.value)"></div><div class="hint" style="margin-top:5px">NCBI eUtils · usar solo en Psicología o Neurociencia Social</div></div>
+    </div>
+    <div class="sh">⚙️ Opciones avanzadas</div>
+    <div class="form-grid">
+      <div class="field"><label>Email cortesía NCBI / OpenAlex</label><input type="email" id="pubmedEmail" value="humanitas@app.io" placeholder="tu@email.com"></div>
+      <div class="field"><label>Ordenar fuentes por</label><select id="sortPapers"><option value="citations">Citas (descendente)</option><option value="year">Año (descendente)</option><option value="source">Fuente</option></select></div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ═══════════════════════════════════════════════════
+//  DISCIPLINE & WORK TYPE DEFINITIONS
+// ═══════════════════════════════════════════════════
+const DISCIPLINE_WORK_TYPES = {
+  social: [
+    'Revisión sistemática de literatura','Estado del arte','Ensayo teórico-crítico',
+    'Marco conceptual','Análisis de políticas públicas','Revisión meta-analítica',
+    'Revisión narrativa','Estudio comparado internacional','Análisis de tendencias',
+    'Revisión de enfoques metodológicos'
+  ],
+  human: [
+    'Revisión historiográfica','Ensayo filosófico','Análisis hermenéutico',
+    'Estado de la cuestión','Análisis del discurso','Revisión filológica',
+    'Estudio crítico de fuentes','Ensayo de historia intelectual',
+    'Revisión de la recepción crítica','Análisis comparado literario'
+  ],
+  legal: [
+    'Revisión doctrinal','Análisis jurisprudencial','Estudio de derecho comparado',
+    'Estado del arte normativo','Análisis crítico del ordenamiento','Ensayo iusteórico',
+    'Revisión de legislación comparada','Análisis de jurisprudencia constitucional',
+    'Revisión de soft law internacional','Análisis de impacto normativo'
+  ]
+};
+
+const DISCIPLINE_PROMPTS = {
+  social: {
+    scoutContext: 'academic research in social sciences (sociology, economics, political science, anthropology, social psychology)',
+    crafterContext: 'Use a rigorous social science voice. Reference theoretical frameworks, empirical studies, and methodological debates.',
+    gapContext: 'Identify theoretical gaps, methodological limitations, and under-researched populations or contexts.'
+  },
+  human: {
+    scoutContext: 'humanities scholarship (history, philosophy, literary studies, linguistics, art history, archaeology)',
+    crafterContext: 'Use a hermeneutic and interpretive scholarly voice. Engage with primary sources, intellectual traditions, and historiographical debates.',
+    gapContext: 'Identify historiographical lacunae, interpretive debates unresolved, neglected sources, or understudied periods and regions.'
+  },
+  legal: {
+    scoutContext: 'legal scholarship (jurisprudence, constitutional law, private law, international law, comparative law)',
+    crafterContext: 'Use a rigorous legal doctrinal voice. Analyze statutes, case law, and scholarly doctrine. Consider comparative and historical dimensions.',
+    gapContext: 'Identify normative gaps, contradictions in case law, areas where doctrine is unsettled, and reform proposals needed.'
+  }
+};
+
+// ═══════════════════════════════════════════════════
+//  AGENT DEFINITIONS
+// ═══════════════════════════════════════════════════
+const AGENTS=[
+  {id:'scout',phase:'1 – Research',badge:'b-r',role:'Research Scout — genera queries y preguntas de investigación para CC.SS./Humanidades/Derecho',def:1000},
+  {id:'signal',phase:'1 – Research',badge:'b-r',role:'Source Finder — rankea fuentes por relevancia y clusters temáticos',def:3000},
+  {id:'scribe',phase:'1 – Research',badge:'b-r',role:'Literature Reviewer — revisión base comprehensiva del estado de la cuestión (≈7500 words)',def:7500},
+  {id:'data_analyst',phase:'1 – Research',badge:'b-r',role:'Trend Analyzer — bibliometría, tendencias temporales y autores de referencia',def:2000},
+  {id:'gap_detector',phase:'1 – Research',badge:'b-r',role:'Lacuna Identifier — brechas doctrinales y vacíos en la literatura',def:2000},
+  {id:'architect',phase:'2 – Structure',badge:'b-w',role:'Document Architect — estructura y distribución de palabras según tipo de trabajo',def:2000},
+  {id:'crafter',phase:'3 – Writing',badge:'b-w',role:'Academic Section Writer — redacta cada sección con voz disciplinar apropiada',def:4000},
+  {id:'thread',phase:'3 – Writing',badge:'b-w',role:'Coherence Checker — revisa la continuidad argumentativa entre secciones',def:800},
+  {id:'narrator',phase:'3 – Writing',badge:'b-w',role:'Voice Refiner — mejora el estilo académico de la disciplina',def:3000},
+  {id:'skeptic',phase:'4 – Validation',badge:'b-v',role:'Fact Checker — detecta afirmaciones sin respaldo documental',def:800},
+  {id:'verifier',phase:'4 – Validation',badge:'b-v',role:'Citation Validator — verifica coherencia entre citas y referencias',def:800},
+  {id:'referee',phase:'4 – Validation',badge:'b-v',role:'Peer Reviewer — puntúa rigor, cobertura, claridad y originalidad (1-5)',def:800},
+  {id:'polish',phase:'5 – Polish',badge:'b-p',role:'Final Editor — gramática, terminología disciplinar, registro formal',def:3000},
+  {id:'enhancer',phase:'5 – Polish',badge:'b-p',role:'Publication Enhancer — abstract 250p + palabras clave + contribuciones',def:2000},
+  {id:'entropy',phase:'5 – Polish',badge:'b-p',role:'Originality Checker — puntúa originalidad del argumento (1-10)',def:500},
+  {id:'methodology',phase:'Auxiliar',badge:'b-a',role:'Methodology Designer — sección de metodología de revisión',def:1500},
+  {id:'results_synthesizer',phase:'Auxiliar',badge:'b-a',role:'Findings Synthesizer — síntesis ejecutiva 5-7 puntos clave',def:1500},
+  {id:'conclusion_writer',phase:'Auxiliar',badge:'b-a',role:'Conclusion Writer — conclusiones 400-500 palabras',def:1500},
+  {id:'voice',phase:'Auxiliar',badge:'b-a',role:'Tone Optimizer — adapta el texto a la audiencia y disciplina',def:2000},
+  {id:'formatter',phase:'Auxiliar',badge:'b-a',role:'Academic Formatter — aplica guías de estilo MLA/Chicago/APA/Harvard',def:2000},
+];
+
+// ═══════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════
+let generatedText='',allPapersStore=[],gapsStore='',sectionTextsStore={};
+let isRunning=false,tStart=0,qualityScore='N/A';
+let currentWizardStep=1;
+let shouldStop=false;
+let currentDisc='social';
+let currentWorkType='Revisión sistemática de literatura';
+
+function stopGeneration(){shouldStop=true;log('⏹ Parando tras el paso actual...','warn');}
+
+const HP_STEPS=[
+  {id:'hp-search',   text:'Buscando fuentes en las bases de datos académicas...'},
+  {id:'hp-analyze',  text:'Analizando y rankeando las fuentes más relevantes...'},
+  {id:'hp-plan',     text:'Planificando la estructura del trabajo...'},
+  {id:'hp-write',    text:'Redactando secciones del artículo...'},
+  {id:'hp-validate', text:'Validando citas y coherencia argumentativa...'},
+  {id:'hp-polish',   text:'Aplicando edición final y generando metadatos...'},
+  {id:'hp-done',     text:'¡Revisión completada con éxito!'},
+];
+let currentHPStep=-1;
+
+// ═══════════════════════════════════════════════════
+//  INIT
+// ═══════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded',()=>{
+  if(location.protocol==='file:'){
+    const warn=document.createElement('div');
+    warn.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9999;background:#dc2626;color:#fff;text-align:center;padding:10px 16px;font-size:13px;font-family:sans-serif;line-height:1.5';
+    warn.innerHTML='⚠️ <strong>Abierto como fichero local (file://)</strong> — las APIs externas no funcionan desde file://. '
+      +'Sube el fichero a GitHub Pages o usa un servidor local: <code style="background:rgba(0,0,0,.3);padding:2px 6px;border-radius:3px">python3 -m http.server 8080</code>';
+    document.body.prepend(warn);
+  }
+  const saved=localStorage.getItem('humanitas_apikey');
+  if(saved){document.getElementById('apiKey').value=saved;document.getElementById('saveKey').checked=true;document.getElementById('btnForget').style.display='';updateAv(saved);}
+  if(localStorage.getItem('humanitas_onboard_done')){document.getElementById('onboardOverlay').style.display='none';}
+  selectDisc('social');
+  buildAgentTable();
+  updateEstimate();
+  renderHistory();
+  buildHPSteps();
+  const draft=localStorage.getItem('humanitas_draft');
+  if(draft){try{const d=JSON.parse(draft);if(d.text){showDraftBanner(d);}}catch(e){}}
+});
+
+// ═══════════════════════════════════════════════════
+//  ONBOARDING
+// ═══════════════════════════════════════════════════
+let obStep=1;
+function nextOnboard(step){obStep=step;[1,2,3].forEach(i=>{document.getElementById('ob'+i).style.display='none';document.getElementById('od'+i).classList.remove('active');});document.getElementById('ob'+step).style.display='block';document.getElementById('od'+step).classList.add('active');}
+function closeOnboard(){document.getElementById('onboardOverlay').style.display='none';localStorage.setItem('humanitas_onboard_done','1');}
+function openOnboard(){document.getElementById('onboardOverlay').style.display='flex';nextOnboard(1);}
+
+// ═══════════════════════════════════════════════════
+//  DISCIPLINE SELECTION
+// ═══════════════════════════════════════════════════
+function selectDisc(disc){
+  currentDisc=disc;
+  ['social','human','legal'].forEach(d=>{
+    const el=document.getElementById('disc-'+d);
+    if(el)el.classList.toggle('selected',d===disc);
+  });
+  renderWorkTypes(disc);
+}
+
+function renderWorkTypes(disc){
+  const container=document.getElementById('workTypesContainer');
+  const types=DISCIPLINE_WORK_TYPES[disc]||[];
+  currentWorkType=types[0]||'';
+  container.innerHTML=types.map((t,i)=>
+    `<div class="wtype${i===0?' selected':''}" onclick="selectWorkType(this,'${t.replace(/'/g,"\\'")}') ">${t}</div>`
+  ).join('');
+}
+
+function selectWorkType(el,type){
+  currentWorkType=type;
+  document.querySelectorAll('.wtype').forEach(w=>w.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ═══════════════════════════════════════════════════
+//  MAIN NAV
+// ═══════════════════════════════════════════════════
+const PANEL_META={
+  wizard:{title:'Nueva revisión',sub:'Configura tu disciplina, tipo de trabajo y genera un artículo académico completo'},
+  output:{title:'Artículo generado',sub:'Edita, descarga o copia tu revisión'},
+  gaps:{title:'Lagunas detectadas',sub:'Vacíos doctrinales identificados automáticamente'},
+  history:{title:'Historial',sub:'Revisiones guardadas localmente en tu navegador'},
+  agents:{title:'Agentes & Tokens',sub:'Configura cada agente del pipeline'},
+  sources:{title:'Fuentes & Límites',sub:'Bases de datos académicas open access'},
+};
+function showMain(name){
+  Object.keys(PANEL_META).forEach(t=>{const tc=document.getElementById('tc-'+t);if(tc)tc.classList.remove('active');const tab=document.getElementById('tab-'+t);if(tab)tab.classList.remove('active');});
+  document.querySelectorAll('.ni-item').forEach(n=>n.classList.remove('active'));
+  const tc=document.getElementById('tc-'+name);if(tc)tc.classList.add('active');
+  const tab=document.getElementById('tab-'+name);if(tab)tab.classList.add('active');
+  document.querySelectorAll('.ni-item').forEach(n=>{if(n.getAttribute('onclick')&&n.getAttribute('onclick').includes("'"+name+"'"))n.classList.add('active');});
+  const m=PANEL_META[name]||{};
+  document.getElementById('topbarTitle').textContent=m.title||name;
+  document.getElementById('topbarSub').textContent=m.sub||'';
+  if(name==='history')renderHistory();
+}
+
+// ═══════════════════════════════════════════════════
+//  WIZARD NAVIGATION
+// ═══════════════════════════════════════════════════
+function goWizard(step){
+  [1,2,3,4].forEach(i=>{
+    document.getElementById('wp'+i).classList.remove('active');
+    const ws=document.getElementById('ws'+i);
+    ws.classList.remove('active','done');
+    if(i<step)ws.classList.add('done');
+  });
+  document.getElementById('wp'+step).classList.add('active');
+  document.getElementById('ws'+step).classList.add('active');
+  currentWizardStep=step;
+  if(step===4)updateEstimate();
+}
+
+// ═══════════════════════════════════════════════════
+//  PRESETS
+// ═══════════════════════════════════════════════════
+const PRESETS={
+  fast:{wc:4000,fast:true,gaps:false,biblio:false,thread:false,enhancer:false,prisma:false,synth:false,oa:true,ss:true,cr:true,ax:false,ep:false,pm:false},
+  std:{wc:8000,fast:false,gaps:true,biblio:true,thread:true,enhancer:true,prisma:true,synth:true,oa:true,ss:true,cr:true,ax:true,ep:false,pm:false},
+  deep:{wc:12000,fast:false,gaps:true,biblio:true,thread:true,enhancer:true,prisma:true,synth:true,oa:true,ss:true,cr:true,ax:true,ep:true,pm:true},
+};
+function applyPreset(key){
+  const p=PRESETS[key];
+  ['fast','std','deep'].forEach(k=>document.getElementById('preset-'+k).classList.remove('selected'));
+  document.getElementById('preset-'+key).classList.add('selected');
+  document.getElementById('wc').value=p.wc;
+  document.getElementById('wcv').textContent=p.wc.toLocaleString()+' palabras';
+  ['fast','gaps','biblio','thread','enhancer','prisma','synth'].forEach(t=>{
+    const el=document.getElementById('tog-'+t);
+    if(el){if(p[t])el.classList.add('on');else el.classList.remove('on');}
+  });
+  ['oa','ss','cr','ax','ep','pm'].forEach(s=>{
+    const chk=document.getElementById('chk-'+s);
+    const sc=document.getElementById('sc-'+s);
+    if(chk){chk.checked=p[s];if(sc)sc.classList.toggle('on',p[s]);}
+  });
+  updateEstimate();
+}
+
+// ═══════════════════════════════════════════════════
+//  COST ESTIMATOR
+// ═══════════════════════════════════════════════════
+const MODEL_COSTS={
+  'gpt-4o-mini':{in:0.15,out:0.6},
+  'gpt-4o':{in:2.5,out:10},
+  'gpt-4-turbo':{in:10,out:30},
+  'gpt-3.5-turbo':{in:0.5,out:1.5},
+};
+function updateEstimate(){
+  const wc=parseInt(document.getElementById('wc')?.value||8000);
+  const model=document.getElementById('model')?.value||'gpt-4o-mini';
+  const fastMode=document.getElementById('tog-fast')?.classList.contains('on');
+  const sources=['oa','ss','cr','ax','ep','pm'].filter(s=>document.getElementById('chk-'+s)?.checked);
+  const extras=['gaps','biblio','thread','enhancer','prisma','synth'].filter(t=>document.getElementById('tog-'+t)?.classList.contains('on'));
+  const baseTokens=35000;
+  const writingTokens=Math.floor(wc*1.8);
+  const extraTokens=extras.length*2000+(fastMode?0:15000);
+  const totalTokens=baseTokens+writingTokens+extraTokens;
+  const cost=MODEL_COSTS[model]||MODEL_COSTS['gpt-4o-mini'];
+  const estCost=((totalTokens/2*cost.in/1e6)+(totalTokens/2*cost.out/1e6));
+  const estMinutes=fastMode?Math.round(3+sources.length*0.5+wc/2000):Math.round(8+sources.length*0.8+wc/1200+extras.length*0.5);
+  const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+  setEl('estTime',`~${estMinutes} min`);
+  setEl('estCost',`~$${estCost.toFixed(2)}`);
+  setEl('estWords',wc.toLocaleString());
+  setEl('estSources',sources.length);
+  setEl('estModel',model);
+}
+
+// ═══════════════════════════════════════════════════
+//  HUMAN PROGRESS
+// ═══════════════════════════════════════════════════
+function buildHPSteps(){
+  const c=document.getElementById('hpSteps');if(!c)return;
+  c.innerHTML=HP_STEPS.map((s,i)=>`<div class="hp-step" id="${s.id}"><div class="hp-dot" id="${s.id}-dot"></div><div class="hp-text" id="${s.id}-text">${s.text}</div></div>`).join('');
+}
+function setHPStep(idx){
+  HP_STEPS.forEach((s,i)=>{
+    const dot=document.getElementById(s.id+'-dot');
+    const txt=document.getElementById(s.id+'-text');
+    if(!dot)return;
+    dot.classList.remove('active','done');txt.classList.remove('active','done');
+    if(i<idx){dot.classList.add('done');txt.classList.add('done');}
+    else if(i===idx){dot.classList.add('active');txt.classList.add('active');}
+  });
+  currentHPStep=idx;
+  document.getElementById('progFill').style.width=Math.round((idx/HP_STEPS.length)*100)+'%';
+}
+function showHP(){document.getElementById('humanProgress').classList.add('v');}
+function toggleLog(){
+  const l=document.getElementById('logPanel');
+  l.classList.toggle('open');
+  document.querySelector('.log-toggle').textContent=l.classList.contains('open')?'▼ Ocultar log técnico ':'▶ Ver log técnico ';
+}
+
+// ═══════════════════════════════════════════════════
+//  API KEY
+// ═══════════════════════════════════════════════════
+function onKeyChange(){const k=document.getElementById('apiKey').value.trim();document.getElementById('btnForget').style.display=k?'':'none';updateAv(k);if(document.getElementById('saveKey').checked&&k)localStorage.setItem('humanitas_apikey',k);}
+function toggleKeyVis(){const i=document.getElementById('apiKey');i.type=i.type==='password'?'text':'password';}
+function forgetKey(){document.getElementById('apiKey').value='';localStorage.removeItem('humanitas_apikey');document.getElementById('saveKey').checked=false;document.getElementById('btnForget').style.display='none';updateAv('');log('🗑 API key eliminada.','warn');}
+function onSaveKey(){const k=document.getElementById('apiKey').value.trim();document.getElementById('saveKey').checked&&k?localStorage.setItem('humanitas_apikey',k):localStorage.removeItem('humanitas_apikey');}
+function updateAv(k){const av=document.getElementById('avI'),lb=document.getElementById('avL');if(k&&k.startsWith('sk-')){av.textContent='OK';av.style.color='var(--teal)';lb.textContent='···'+k.slice(-4).toUpperCase();}else{av.textContent='--';av.style.color='var(--red)';lb.textContent='Sin configurar';}}
+
+// ═══════════════════════════════════════════════════
+//  SOURCE SYNC
+// ═══════════════════════════════════════════════════
+function toggleSrc(id){const c=document.getElementById('chk-'+id);c.checked=!c.checked;document.getElementById('sc-'+id).classList.toggle('on',c.checked);const c2=document.getElementById('chk2-'+id);const sc2=document.getElementById('sc2-'+id);if(c2){c2.checked=c.checked;if(sc2)sc2.classList.toggle('on',c.checked);}updateEstimate();}
+function syncSrc(id){const c2=document.getElementById('chk2-'+id);c2.checked=!c2.checked;document.getElementById('sc2-'+id).classList.toggle('on',c2.checked);const c=document.getElementById('chk-'+id);const sc=document.getElementById('sc-'+id);if(c){c.checked=c2.checked;if(sc)sc.classList.toggle('on',c2.checked);}updateEstimate();}
+function syncLim(id,v){const el=document.getElementById('lim-'+id);if(el)el.value=v;}
+
+// ═══════════════════════════════════════════════════
+//  AGENT TABLE
+// ═══════════════════════════════════════════════════
+function buildAgentTable(){
+  document.getElementById('agentTbody').innerHTML=AGENTS.map(a=>{
+    const saved=localStorage.getItem('htok_'+a.id);const v=saved?parseInt(saved):a.def;
+    return `<tr><td><strong>${a.id}</strong></td><td><span class="badge ${a.badge}">${a.phase}</span></td><td style="color:var(--t2);font-size:11px">${a.role}</td><td><input type="number" id="tok_${a.id}" value="${v}" min="100" max="16000" step="100" onchange="localStorage.setItem('htok_${a.id}',this.value)"></td></tr>`;
+  }).join('');
+}
+function resetAgentDefaults(){AGENTS.forEach(a=>{localStorage.removeItem('htok_'+a.id);const el=document.getElementById('tok_'+a.id);if(el)el.value=a.def;});log('↺ Tokens restaurados.','warn');}
+function getTokens(id){const el=document.getElementById('tok_'+id);if(el)return parseInt(el.value)||1000;return AGENTS.find(a=>a.id===id)?.def||1000;}
+
+// ═══════════════════════════════════════════════════
+//  LOG
+// ═══════════════════════════════════════════════════
+let logCount=0;
+function log(msg,type='info'){
+  const p=document.getElementById('logPanel'),d=document.createElement('div');
+  d.className='ll '+type;
+  const ts=new Date().toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  d.textContent=`[${ts}] ${msg}`;p.appendChild(d);p.scrollTop=p.scrollHeight;
+  logCount++;const lc=document.getElementById('logCount');if(lc)lc.textContent=`(${logCount})`;
+}
+function setPhase(n,s){const el=document.getElementById('ph'+n);if(!el)return;el.classList.remove('active','done');if(s)el.classList.add(s);}
+
+// ═══════════════════════════════════════════════════
+//  OPENAI CALL
+// ═══════════════════════════════════════════════════
+async function callAI(apiKey,messages,maxTokens=1500,temp=0.7){
+  const model=document.getElementById('model').value;
+  const retries=parseInt(document.getElementById('maxRetries').value)||3;
+  for(let attempt=0;attempt<retries;attempt++){
+    if(shouldStop)throw new Error('__STOPPED__');
+    try{
+      const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model,messages,max_tokens:maxTokens,temperature:temp})});
+      if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e?.error?.message||'HTTP '+r.status);}
+      return(await r.json()).choices[0].message.content;
+    }catch(e){
+      if(e.message==='__STOPPED__')throw e;
+      if(attempt<retries-1){const w=Math.pow(2,attempt)*1000;log(`⚠ Reintento ${attempt+1}/${retries}: ${e.message} (${w/1000}s)...`,'warn');await new Promise(r=>setTimeout(r,w));}
+      else throw e;
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  SEARCH ENGINES
+// ═══════════════════════════════════════════════════
+async function searchSS(q,max){const p=new URLSearchParams({query:q,limit:Math.min(max,100),offset:0,fields:'paperId,title,abstract,year,authors,venue,citationCount,url,externalIds'});try{const r=await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${p}`,{headers:{'x-api-key':'uXw4IjvzYg7lLJSR7g3uJ3HQS6rhsgRO6lBbQTWB'}});if(!r.ok)throw new Error('SS '+r.status);return((await r.json()).data||[]).map(p=>({title:p.title||'',authors:(p.authors||[]).slice(0,4).map(a=>a.name),year:String(p.year||''),journal:p.venue||'',abstract:(p.abstract||'').slice(0,500),citations:p.citationCount||0,url:p.url||'',doi:(p.externalIds||{}).DOI||'',source:'Semantic Scholar',oa_status:''}));}catch(e){log('⚠ Semantic Scholar: '+e.message,'warn');return[];}}
+
+async function searchOA(q,max){const email=document.getElementById('pubmedEmail')?.value||'humanitas@app.io';try{const p=new URLSearchParams({search:q,per_page:Math.min(max,200),page:1,select:'id,title,abstract_inverted_index,publication_year,authorships,primary_location,cited_by_count,doi,open_access',mailto:email});const r=await fetch(`https://api.openalex.org/works?${p}`);if(!r.ok)throw new Error('OA '+r.status);return((await r.json()).results||[]).map(w=>{let abstract='';try{if(w.abstract_inverted_index){const pos=[];Object.entries(w.abstract_inverted_index).forEach(([word,positions])=>positions.forEach(p=>pos.push([p,word])));abstract=pos.sort((a,b)=>a[0]-b[0]).map(x=>x[1]).join(' ').slice(0,500);}}catch(e){}return{title:w.title||'',authors:(w.authorships||[]).slice(0,4).map(a=>a.author?.display_name||''),year:String(w.publication_year||''),journal:w.primary_location?.source?.display_name||'',abstract,citations:w.cited_by_count||0,url:w.id||'',doi:(w.doi||'').replace('https://doi.org/',''),source:'OpenAlex',oa_status:w.open_access?.oa_status||''};}).filter(p=>p.title);}catch(e){log('⚠ OpenAlex: '+e.message,'warn');return[];}}
+
+async function searchCR(q,max){const email=document.getElementById('pubmedEmail')?.value||'humanitas@app.io';try{const p=new URLSearchParams({query:q,rows:Math.min(max,100),select:'DOI,title,author,published,container-title,abstract,is-referenced-by-count,URL',mailto:email});const r=await fetch(`https://api.crossref.org/works?${p}`);if(!r.ok)throw new Error('CR '+r.status);return(((await r.json()).message||{}).items||[]).map(w=>{const year=w.published?.['date-parts']?.[0]?.[0]||'';const doi=w.DOI||'';return{title:(Array.isArray(w.title)?w.title[0]:w.title)||'',authors:(w.author||[]).slice(0,4).map(a=>`${a.family||''} ${(a.given||'')[0]||''}`.trim()),year:String(year),journal:(Array.isArray(w['container-title'])?w['container-title'][0]:w['container-title'])||'',abstract:(w.abstract||'').replace(/<[^>]+>/g,'').slice(0,500),citations:w['is-referenced-by-count']||0,url:doi?`https://doi.org/${doi}`:'',doi,source:'CrossRef',oa_status:''};}).filter(p=>p.title);}catch(e){log('⚠ CrossRef: '+e.message,'warn');return[];}}
+
+async function searchAX(q,max){try{const arxivUrl=`https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(q.replace(/\s+/g,'+'))}&start=0&max_results=${max}`;const r=await fetch(`https://corsproxy.io/?url=${encodeURIComponent(arxivUrl)}`);if(!r.ok)throw new Error('arXiv '+r.status);const xml=new DOMParser().parseFromString(await r.text(),'application/xml');return Array.from(xml.querySelectorAll('entry')).map(e=>({title:(e.querySelector('title')?.textContent||'').replace(/\s+/g,' ').trim(),authors:Array.from(e.querySelectorAll('author name')).slice(0,4).map(a=>a.textContent),year:(e.querySelector('published')?.textContent||'').slice(0,4),journal:'arXiv',abstract:(e.querySelector('summary')?.textContent||'').slice(0,500).replace(/\s+/g,' '),citations:0,url:e.querySelector('id')?.textContent||'',doi:e.querySelector("link[title='doi']")?.getAttribute('href')||'',source:'arXiv',oa_status:'gold'})).filter(p=>p.title);}catch(e){log('⚠ arXiv: '+e.message,'warn');return[];}}
+
+async function searchEPMC(q,max){try{const p=new URLSearchParams({query:q,format:'json',pageSize:Math.min(max,100),resultType:'core',sort:'CITED desc'});const r=await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?${p}`);if(!r.ok)throw new Error('EPMC '+r.status);return(((await r.json()).resultList||{}).result||[]).map(a=>({title:a.title||'',authors:(a.authorString||'').split(',').slice(0,4).map(s=>s.trim()),year:String(a.pubYear||''),journal:a.journalTitle||'',abstract:(a.abstractText||'').slice(0,500),citations:a.citedByCount||0,url:a.pmid?`https://europepmc.org/article/MED/${a.pmid}`:(a.doi?`https://doi.org/${a.doi}`:''),doi:a.doi||'',source:'Europe PMC',oa_status:a.inEPMC==='Y'?'open':''})).filter(p=>p.title);}catch(e){log('⚠ EuropePMC: '+e.message,'warn');return[];}}
+
+async function searchPM(q,max){const email=document.getElementById('pubmedEmail')?.value||'humanitas@app.io';try{const sp=new URLSearchParams({db:'pubmed',term:`(${q}) AND (English[Language] OR Spanish[Language])`,retmax:max,retmode:'json',tool:'humanitas',email});const pmids=((await(await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${sp}`)).json()).esearchresult?.idlist||[]).slice(0,max);if(!pmids.length)return[];const fp=new URLSearchParams({db:'pubmed',id:pmids.join(','),retmode:'json',tool:'humanitas',email});const res=(await(await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?${fp}`)).json()).result||{};return pmids.map(id=>{const a=res[id]||{};return{title:a.title||'',authors:(a.authors||[]).slice(0,4).map(x=>x.name||''),year:(a.pubdate||'').slice(0,4),journal:a.fulljournalname||a.source||'',abstract:'',citations:0,url:`https://pubmed.ncbi.nlm.nih.gov/${id}/`,doi:(a.articleids||[]).find(x=>x.idtype==='doi')?.value||'',source:'PubMed',oa_status:''};}).filter(p=>p.title);}catch(e){log('⚠ PubMed: '+e.message,'warn');return[];}}
+
+function dedup(papers){const seen=new Set();return papers.filter(p=>{const k=p.title.toLowerCase().slice(0,50).replace(/\s+/g,'');if(!k||seen.has(k))return false;seen.add(k);return true;});}
+function sortPapers(papers){const by=document.getElementById('sortPapers')?.value||'citations';if(by==='citations')return papers.sort((a,b)=>(b.citations||0)-(a.citations||0));if(by==='year')return papers.sort((a,b)=>parseInt(b.year||0)-parseInt(a.year||0));return papers.sort((a,b)=>a.source.localeCompare(b.source));}
+function fmt(papers,top=25){return papers.slice(0,top).map((p,i)=>{const a=p.authors.slice(0,3).join(', ')+(p.authors.length>3?' et al.':'');return`[${i+1}] ${p.title}\n    Authors: ${a||'Unknown'} | Year: ${p.year||'?'} | Venue: ${p.journal||'?'} | Citations: ${p.citations}\n    Source: ${p.source} | DOI: ${p.doi||'N/A'}\n    Abstract: ${p.abstract||'(not available)'}\n    URL: ${p.url}`;}).join('\n\n');}
+
+// ═══════════════════════════════════════════════════
+//  AUTOSAVE DRAFT
+// ═══════════════════════════════════════════════════
+function saveDraft(sections,papers,gaps,meta){
+  try{localStorage.setItem('humanitas_draft',JSON.stringify({sections,papers:papers.slice(0,20),gaps,meta,ts:Date.now(),text:Object.entries(sections).map(([k,v])=>`## ${k}\n\n${v}`).join('\n\n')}));}catch(e){}
+}
+function showDraftBanner(d){
+  const meta=d.meta||{};
+  const banner=document.createElement('div');
+  banner.style.cssText='position:fixed;bottom:20px;right:20px;background:#ffffff;border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.4);border-radius:var(--rl);padding:14px 18px;z-index:500;max-width:320px';
+  banner.innerHTML=`<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">📋 Borrador guardado</div><div style="font-size:12px;color:var(--t2);margin-bottom:10px">${meta.topic||'Revisión anterior'} · ${new Date(d.ts).toLocaleDateString('es')}</div><div style="display:flex;gap:8px"><button class="btn btn-primary" style="font-size:12px;padding:5px 10px" onclick="loadDraft()">Recuperar</button><button class="btn btn-danger" style="font-size:12px;padding:5px 10px" onclick="this.closest('div[style]').remove();localStorage.removeItem('humanitas_draft')">Descartar</button></div>`;
+  document.body.appendChild(banner);
+}
+function loadDraft(){
+  try{
+    const d=JSON.parse(localStorage.getItem('humanitas_draft'));
+    if(!d)return;
+    generatedText=d.text||'';
+    sectionTextsStore=d.sections||{};
+    allPapersStore=d.papers||[];
+    gapsStore=d.gaps||'';
+    renderOutputSections(sectionTextsStore,d.papers||[],d.gaps||'',d.meta||{});
+    document.getElementById('partialBadge').style.display='flex';
+    document.getElementById('qualityBar').style.display='flex';
+    document.getElementById('exportRow').style.display='flex';
+    document.getElementById('outputBadge').style.display='';
+    showMain('output');
+    document.querySelector('[style*="position:fixed;bottom"]')?.remove();
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════════════
+//  HISTORY
+// ═══════════════════════════════════════════════════
+function saveToHistory(topic,wordCount,sections,time){
+  try{let hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');hist.unshift({id:Date.now(),topic,wordCount,sections,time,ts:Date.now(),text:generatedText});hist=hist.slice(0,5);localStorage.setItem('humanitas_history',JSON.stringify(hist));}catch(e){}
+  renderHistory();
+}
+function renderHistory(){
+  const area=document.getElementById('historyList');if(!area)return;
+  try{
+    const hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');
+    if(!hist.length){area.innerHTML='<div class="placeholder"><div class="bi">🕓</div><p>Aún no hay revisiones guardadas.</p></div>';return;}
+    area.innerHTML=hist.map((h,i)=>`<div class="hist-card fi"><div class="hist-info"><div class="hist-title">${h.topic||'Sin título'}</div><div class="hist-meta">${new Date(h.ts).toLocaleDateString('es')} · ${(h.wordCount||0).toLocaleString()} palabras · ${h.sections||0} secciones · ${h.time||'?'}</div></div><div class="hist-actions"><button class="btn-ghost" onclick="loadFromHistory(${i})">📂 Cargar</button><button class="btn-ghost" onclick="downloadHistory(${i})">⬇</button><button class="btn-ghost" style="color:var(--red)" onclick="deleteHistory(${i})">🗑</button></div></div>`).join('');
+  }catch(e){area.innerHTML='<div class="placeholder"><div class="bi">🕓</div><p>Error cargando historial.</p></div>';}
+}
+function loadFromHistory(i){try{const hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');const h=hist[i];if(!h)return;generatedText=h.text||'';showMain('output');document.getElementById('outputArea').innerHTML='';const pre=document.createElement('div');pre.className='out-area fi';pre.textContent=h.text||'';document.getElementById('outputArea').appendChild(pre);document.getElementById('exportRow').style.display='flex';}catch(e){}}
+function downloadHistory(i){try{const hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');const h=hist[i];if(!h)return;generatedText=h.text||'';exportMarkdown();}catch(e){}}
+function deleteHistory(i){try{let hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');hist.splice(i,1);localStorage.setItem('humanitas_history',JSON.stringify(hist));renderHistory();}catch(e){}}
+function clearHistory(){localStorage.removeItem('humanitas_history');renderHistory();}
+
+// ═══════════════════════════════════════════════════
+//  RENDER OUTPUT
+// ═══════════════════════════════════════════════════
+function renderOutputSections(sections,papers,gaps,meta){
+  const oa=document.getElementById('outputArea');oa.innerHTML='';
+  const container=document.createElement('div');container.className='fi';
+  const words=Object.values(sections).join(' ').split(/\s+/).length;
+  ['sPapers','sWords','sSecs','sTime','sScore'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.textContent=[papers.length,words.toLocaleString(),Object.keys(sections).length,meta.time||'—',meta.score||'N/A'][i];});
+  document.getElementById('statsRow').style.display='grid';
+  ['qbPapers','qbSecs','qbTime','qbScore'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.textContent=[papers.length,Object.keys(sections).length,meta.time||'—',meta.score||'N/A'][i];});
+  document.getElementById('qualityBar').style.display='flex';
+  Object.entries(sections).forEach(([title,content])=>{
+    const block=document.createElement('div');block.className='section-block';
+    block.innerHTML=`<div class="section-header" onclick="toggleSection(this)"><span class="section-title-text">📄 ${title}</span><div class="section-actions" onclick="event.stopPropagation()"><button class="btn-ghost" onclick="openRegenPanel(this)" title="Reescribir sección">🔄 Reescribir</button><span style="font-size:12px;color:var(--t3)">${content.split(/\s+/).length} palabras</span><span style="color:var(--t3);font-size:12px">▼</span></div></div><div class="section-body"><textarea oninput="updateSectionText('${title}',this.value)">${content}</textarea><div class="regen-panel" id="rp-${title.replace(/\s+/g,'_')}"><div style="font-size:12px;color:var(--amber);margin-bottom:6px">🔄 Reescribir "${title}"</div><textarea placeholder="Feedback opcional: hazla más crítica, añade jurisprudencia española, enfoca en el debate doctrinal..."></textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-amber" style="font-size:12px;padding:5px 12px" onclick="regenSection('${title}',this)">Regenerar</button><button class="btn-ghost" onclick="this.closest('.regen-panel').classList.remove('open')">Cancelar</button></div></div></div>`;
+    container.appendChild(block);
+  });
+  if(papers.length){
+    const refBlock=document.createElement('div');refBlock.className='section-block';
+    refBlock.innerHTML=`<div class="section-header"><span class="section-title-text">📚 Referencias (${papers.length})</span><span style="font-size:12px;color:var(--t3)">▼</span></div><div class="section-body" style="padding:12px 16px;font-size:12px;color:var(--t2);line-height:1.8">${papers.slice(0,40).map((p,i)=>{const a=p.authors.slice(0,3).join(', ')+(p.authors.length>3?' et al.':'');return`[${i+1}] ${a||'Unknown'}. "${p.title}". ${p.journal||''}${p.year?', '+p.year:''}. ${p.doi?'<a href="https://doi.org/'+p.doi+'" target="_blank" style="color:var(--accent)">DOI</a>':''} ${p.oa_status?'<span style="color:var(--teal);font-size:10px">✅ '+p.oa_status+'</span>':''}<br>`;}).join('')}</div>`;
+    container.appendChild(refBlock);
+  }
+  if(gaps){
+    const gapBlock=document.createElement('div');gapBlock.className='section-block';
+    gapBlock.innerHTML=`<div class="section-header"><span class="section-title-text">🔍 Lagunas Doctrinales</span><span style="font-size:12px;color:var(--t3)">▼</span></div><div class="section-body"><div style="white-space:pre-wrap;font-size:13px;color:var(--t2);line-height:1.7">${gaps}</div></div>`;
+    container.appendChild(gapBlock);
+  }
+  oa.appendChild(container);
+  document.getElementById('outputBadge').style.display='';
+}
+
+function toggleSection(header){const body=header.nextElementSibling;body.style.display=body.style.display==='none'?'':'none';}
+function updateSectionText(title,val){sectionTextsStore[title]=val;rebuildFullText();}
+function rebuildFullText(){generatedText=Object.entries(sectionTextsStore).map(([k,v])=>`## ${k}\n\n${v}`).join('\n\n');}
+function openRegenPanel(btn){const rp=btn.closest('.section-body')?.querySelector('.regen-panel');if(rp)rp.classList.toggle('open');}
+
+async function regenSection(title,btn){
+  const apiKey=document.getElementById('apiKey').value.trim();
+  if(!apiKey){alert('Introduce tu API key primero.');return;}
+  const rpanel=btn.closest('.regen-panel');
+  const feedback=rpanel.querySelector('textarea').value.trim();
+  const orig=btn.textContent;
+  btn.textContent='⏳...';btn.disabled=true;
+  const discCtx=DISCIPLINE_PROMPTS[currentDisc]||DISCIPLINE_PROMPTS.social;
+  try{
+    const lang=document.getElementById('lang').value;
+    const newContent=await callAI(apiKey,[
+      {role:'system',content:`You are an Academic Section Writer specializing in ${discCtx.scoutContext}. Write in ${lang}. ${discCtx.crafterContext}`},
+      {role:'user',content:`Rewrite the "${title}" section.\n${feedback?'User feedback: '+feedback+'\n':''}\nBase on:\n${fmt(allPapersStore,15)}\n\nWrite ~${Math.max(400,Math.floor(parseInt(document.getElementById('wc').value)/Object.keys(sectionTextsStore).length))} words. Academic tone. Cite as [Author, Year] in ${document.getElementById('citeStyle').value} style.`}
+    ],getTokens('crafter'),0.7);
+    sectionTextsStore[title]=newContent;
+    document.querySelectorAll('.section-header').forEach(h=>{if(h.querySelector('.section-title-text')?.textContent.includes(title)){const ta=h.nextElementSibling?.querySelector('textarea');if(ta)ta.value=newContent;}});
+    rebuildFullText();
+    rpanel.classList.remove('open');
+    log(`✅ Sección "${title}" regenerada.`,'ok');
+  }catch(e){log('❌ Regenerar: '+e.message,'err');}
+  finally{btn.textContent=orig;btn.disabled=false;}
+}
+
+// ═══════════════════════════════════════════════════
+//  MAIN PIPELINE
+// ═══════════════════════════════════════════════════
+async function startGeneration(){
+  if(isRunning)return;
+  const apiKey=document.getElementById('apiKey').value.trim();
+  const topic=document.getElementById('topic').value.trim();
+  if(!apiKey||!apiKey.startsWith('sk-')){alert('Introduce una API key de OpenAI válida (sk-...)');return;}
+  if(!topic){alert('Introduce el tema de la revisión');showMain('wizard');goWizard(1);document.getElementById('topic').focus();return;}
+  if(document.getElementById('saveKey').checked)localStorage.setItem('humanitas_apikey',apiKey);
+
+  isRunning=true;tStart=Date.now();logCount=0;shouldStop=false;
+  document.getElementById('btnGen').disabled=true;
+  document.getElementById('btnGen').innerHTML='<span class="pulsing">⏳</span> Generando...';
+  document.getElementById('btnStop').disabled=false;
+  document.getElementById('btnGenWizard').disabled=true;
+  document.getElementById('btnStopWizard').disabled=false;
+  document.getElementById('logPanel').innerHTML='';
+  goWizard(4);showMain('wizard');
+  showHP();buildHPSteps();setHPStep(0);
+  [1,2,3,4,5].forEach(n=>setPhase(n,''));
+
+  const wc=parseInt(document.getElementById('wc').value);
+  const cite=document.getElementById('citeStyle').value;
+  const lang=document.getElementById('lang').value;
+  const kw=document.getElementById('keywords').value.trim();
+  const instruct=document.getElementById('instructions').value.trim();
+  const fastMode=document.getElementById('tog-fast').classList.contains('on');
+  const doGaps=document.getElementById('tog-gaps').classList.contains('on');
+  const doBiblio=document.getElementById('tog-biblio').classList.contains('on');
+  const doThread=document.getElementById('tog-thread').classList.contains('on');
+  const doEnh=document.getElementById('tog-enhancer').classList.contains('on');
+  const doPrisma=document.getElementById('tog-prisma').classList.contains('on');
+  const doSynth=document.getElementById('tog-synth').classList.contains('on');
+  const temp=parseFloat(document.getElementById('temperature').value)||0.7;
+  const maxQ=parseInt(document.getElementById('maxQueries').value)||4;
+  const topP=parseInt(document.getElementById('topPapers').value)||25;
+
+  const useOA=document.getElementById('chk-oa').checked;
+  const useSS=document.getElementById('chk-ss').checked;
+  const useCR=document.getElementById('chk-cr').checked;
+  const useAX=document.getElementById('chk-ax').checked;
+  const useEP=document.getElementById('chk-ep').checked;
+  const usePM=document.getElementById('chk-pm').checked;
+  const limOA=parseInt(document.getElementById('lim-oa').value)||30;
+  const limSS=parseInt(document.getElementById('lim-ss').value)||25;
+  const limCR=parseInt(document.getElementById('lim-cr').value)||20;
+  const limAX=parseInt(document.getElementById('lim-ax').value)||15;
+  const limEP=parseInt(document.getElementById('lim-ep').value)||15;
+  const limPM=parseInt(document.getElementById('lim-pm').value)||15;
+
+  const discCtx=DISCIPLINE_PROMPTS[currentDisc]||DISCIPLINE_PROMPTS.social;
+  const workTypeCtx=currentWorkType||'revisión de literatura';
+
+  try{
+    // ── FASE 1: RESEARCH ──────────────────────────
+    setPhase(1,'active');setHPStep(0);
+    log('📚 ── FASE 1: RESEARCH ──────────────────────','info');
+    log(`🎓 Disciplina: ${currentDisc.toUpperCase()} · Tipo: ${workTypeCtx}`,'info');
+
+    log('🤖 Scout: planificando búsqueda académica...','info');
+    let plan={research_questions:[],search_terms:[topic+(kw?' '+kw:'')],key_areas:[]};
+    try{
+      const raw=await callAI(apiKey,[{role:'user',content:`Plan a "${workTypeCtx}" in ${discCtx.scoutContext} on: "${topic}"\nGenerate JSON:\n- research_questions: 4-5 specific research questions appropriate for this work type\n- search_terms: ${maxQ} specific academic queries (include relevant disciplinary terminology)\n- key_areas: 3-5 thematic areas\nJSON only.`}],getTokens('scout'),0.5);
+      plan=JSON.parse(raw.replace(/```json|```/g,'').trim());
+      log(`✅ Scout: ${(plan.key_areas||[]).join(' · ')}`,'ok');
+    }catch(e){log('⚠ Scout JSON fallido, usando query directa.','warn');}
+
+    const queries=(plan.search_terms||[topic]).slice(0,maxQ).map(q=>kw?`${q} ${kw}`:q);
+
+    setHPStep(0);
+    let allPapers=[];
+    for(let qi=0;qi<queries.length;qi++){
+      if(shouldStop)throw new Error('__STOPPED__');
+      const q=queries[qi];
+      log(`🔍 Query ${qi+1}/${queries.length}: "${q.slice(0,50)}"`,'info');
+      if(useOA){const p=await searchOA(q,limOA);log(`  OpenAlex: ${p.length}`,'ok');allPapers.push(...p);}
+      if(shouldStop)throw new Error('__STOPPED__');
+      if(useSS){const p=await searchSS(q,limSS);log(`  Semantic Scholar: ${p.length}`,'ok');allPapers.push(...p);}
+      if(shouldStop)throw new Error('__STOPPED__');
+      if(useCR){const p=await searchCR(q,limCR);log(`  CrossRef: ${p.length}`,'ok');allPapers.push(...p);}
+      if(shouldStop)throw new Error('__STOPPED__');
+      if(useAX){const p=await searchAX(q,limAX);log(`  arXiv: ${p.length}`,'ok');allPapers.push(...p);}
+      if(shouldStop)throw new Error('__STOPPED__');
+      if(useEP){const p=await searchEPMC(q,limEP);log(`  EuropePMC: ${p.length}`,'ok');allPapers.push(...p);}
+      if(shouldStop)throw new Error('__STOPPED__');
+      if(usePM){const p=await searchPM(q,limPM);log(`  PubMed: ${p.length}`,'ok');allPapers.push(...p);}
+    }
+    allPapers=sortPapers(dedup(allPapers));
+    allPapersStore=allPapers;
+    log(`📊 Total deduplicado: ${allPapers.length} fuentes`,'ok');
+
+    const papersFormatted=fmt(allPapers,topP);
+
+    setHPStep(1);
+    log('🤖 Signal: análisis de relevancia disciplinar...','info');
+    const signalAnalysis=await callAI(apiKey,[
+      {role:'system',content:`You are a Source Finder specializing in ${discCtx.scoutContext}.`},
+      {role:'user',content:`Analyze ${allPapers.length} academic sources for a "${workTypeCtx}" on "${topic}".\n\nSOURCES:\n${papersFormatted}\n\n1. TOP 15 most relevant sources\n2. Key academic venues and journals\n3. Thematic clusters (3-5)\n4. Temporal and intellectual trends\n5. Most cited authors`}
+    ],getTokens('signal'),temp);
+    log('✅ Signal completado.','ok');
+
+    log('🤖 Scribe: revisión de la literatura base...','info');
+    const mainReview=await callAI(apiKey,[
+      {role:'system',content:`You are a Literature Reviewer specializing in ${discCtx.scoutContext}. Write in ${lang}. ${discCtx.crafterContext}`},
+      {role:'user',content:`Write a comprehensive literature review (état de la question / state of the art) for a "${workTypeCtx}" on: "${topic}"\n\nBased on:\n${papersFormatted}\n\nCover: 1) Intellectual genealogy and historical background 2) Main theoretical frameworks and schools of thought 3) Key empirical/doctrinal contributions 4) Methodological debates 5) Existing gaps and controversies\nCite as [Author, Year].${instruct?'\n\nInstructions: '+instruct:''}`}
+    ],getTokens('scribe'),temp);
+    log(`✅ Scribe: ${mainReview.split(' ').length} palabras.`,'ok');
+
+    let trendAnalysis='';
+    if(doBiblio){
+      log('🤖 DataAnalyst: tendencias bibliométricas...','info');
+      const pd=allPapers.slice(0,50).map(p=>`- ${p.title} (${p.year||'?'}) | ${p.journal||'?'} | Cites: ${p.citations} | ${p.source}`).join('\n');
+      trendAnalysis=await callAI(apiKey,[{role:'system',content:`You are an Academic Trend Analyzer for ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Analyze publication and intellectual trends:\n${pd}\n\n1. Volume by decade/year 2. Most influential journals 3. Intellectual trajectory 4. Emerging research areas 5. Key authors and schools.`}],getTokens('data_analyst'),temp);
+      log('✅ DataAnalyst completado.','ok');
+    }
+
+    let gapsText='';
+    if(doGaps){
+      log('🤖 GapDetector: identificando lagunas...','info');
+      const abstracts=allPapers.slice(0,30).map((p,i)=>`[${i+1}] ${p.title} (${p.year||'?'}): ${p.abstract||'(no abstract)'}`).join('\n\n');
+      const rqs=(plan.research_questions||[]).map(q=>`- ${q}`).join('\n')||`- What is the current state of scholarship on ${topic}?`;
+      gapsText=await callAI(apiKey,[{role:'system',content:`You are a Lacuna Identifier specializing in ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Analyze lacunae and research gaps for: "${topic}" (work type: ${workTypeCtx})\n\n${discCtx.gapContext}\n\nRESEARCH QUESTIONS:\n${rqs}\n\nSOURCES:\n${abstracts}\n\nFor each gap:\nGAP [N]: [title]\nStatus: Unresolved / Partially addressed\nEvidence: [what exists and why it falls short]\nSuggested contribution: [type and approach needed]\n\n4-6 specific gaps.`}],getTokens('gap_detector'),temp);
+      gapsStore=gapsText;
+      log('✅ GapDetector completado.','ok');
+    }
+
+    setPhase(1,'done');setPhase(2,'active');
+
+    // ── FASE 2: STRUCTURE ─────────────────────────
+    setHPStep(2);
+    log('🏗️ ── FASE 2: STRUCTURE ──────────────────────','info');
+    // Default structures by discipline
+    let defaultStructure={};
+    if(currentDisc==='legal'){
+      defaultStructure={"Introducción":700,"Marco jurídico y normativo":1200,"Análisis doctrinal":2000,"Jurisprudencia relevante":1500,"Derecho comparado":1000,"Lagunas y propuestas de reforma":700,"Conclusiones":500};
+    } else if(currentDisc==='human'){
+      defaultStructure={"Introducción":700,"Contextualización histórica e intelectual":1200,"Principales corrientes y debates":2000,"Análisis hermenéutico":1500,"Recepción e influencia":800,"Perspectivas actuales y líneas abiertas":600,"Conclusiones":500};
+    } else {
+      defaultStructure={"Introducción":700,"Marco teórico":1200,"Estado de la cuestión":2000,"Enfoques metodológicos":1200,"Hallazgos y debates principales":1200,"Lagunas y agenda de investigación":700,"Conclusiones":500};
+    }
+    let structure=defaultStructure;
+    try{
+      const sr=await callAI(apiKey,[{role:'user',content:`Design a structure for a "${workTypeCtx}" in ${discCtx.scoutContext} on: "${topic}"\n~${wc} words. In ${lang}.\n${instruct?'Instructions: '+instruct+'\n':''}\nReturn JSON: keys=section titles (in ${lang}), values=word counts. 6-8 sections. Sum≈${wc}.\nJSON only.`}],getTokens('architect'),0.5);
+      const parsed=JSON.parse(sr.replace(/```json|```/g,'').trim());
+      if(typeof parsed==='object'&&Object.keys(parsed).length>3)structure=parsed;
+      log(`✅ Architect: ${Object.keys(structure).join(' → ')}`,'ok');
+    }catch(e){log('⚠ Usando estructura por defecto para '+currentDisc,'warn');}
+
+    setPhase(2,'done');setPhase(3,'active');
+
+    // ── FASE 3: WRITING ───────────────────────────
+    setHPStep(3);
+    log('✍️ ── FASE 3: WRITING ─────────────────────────','info');
+    const sections=Object.keys(structure);
+    const sectionTexts={};let prevContent='';
+
+    for(let i=0;i<sections.length;i++){
+      const sec=sections[i];const tgt=structure[sec];
+      log(`✍️ Crafter: "${sec}" (~${tgt} palabras)...`,'info');
+      const text=await callAI(apiKey,[
+        {role:'system',content:`You are an Academic Section Writer for a "${workTypeCtx}" in ${discCtx.scoutContext}. Write in ${lang}. ${discCtx.crafterContext} Citation style: ${cite}.`},
+        {role:'user',content:`Write the "${sec}" section.\nTopic: ${topic}\nTarget: ~${tgt} words\n${instruct?'Instructions: '+instruct+'\n':''}\nGaps identified:\n${gapsText?gapsText.slice(0,600):'N/A'}\n\nBase on this literature review:\n${mainReview}\n\nSource analysis:\n${signalAnalysis}\n\nCite as [Author, Year] in ${cite} style.`}
+      ],getTokens('crafter'),temp);
+
+      if(doThread&&prevContent&&i>0){
+        try{await callAI(apiKey,[{role:'user',content:`Check argumentative coherence:\nPREV (last 400):\n${prevContent.slice(-400)}\nCURR (first 400):\n${text.slice(0,400)}\nNote any logical gaps briefly.`}],getTokens('thread'),0.3);}catch(e){}
+      }
+
+      let finalText=text;
+      try{finalText=await callAI(apiKey,[{role:'system',content:`You are a Voice Refiner for ${discCtx.scoutContext} writing. Write in ${lang}.`},{role:'user',content:`Refine the academic voice of this section for a "${workTypeCtx}":\n\n${text}\n\nImprove: 1) appropriate disciplinary register 2) argumentative flow 3) transitions 4) remove redundancies.\nPreserve all citations. Return text only.`}],getTokens('narrator'),temp);}catch(e){}
+
+      sectionTexts[sec]=finalText;prevContent=finalText;
+      log(`✅ "${sec}": ${finalText.split(' ').length} palabras`,'ok');
+      saveDraft(sectionTexts,allPapers,gapsText,{topic,time:Math.round((Date.now()-tStart)/1000)+'s'});
+    }
+    sectionTextsStore={...sectionTexts};
+    setPhase(3,'done');
+
+    // ── FASE 4: VALIDATION ────────────────────────
+    let qs='N/A';
+    if(!fastMode){
+      setPhase(4,'active');setHPStep(4);
+      log('🔍 ── FASE 4: VALIDATION ─────────────────────','info');
+      const refs=allPapers.slice(0,30).map((p,i)=>{const a=p.authors.slice(0,3).join(', ')+(p.authors.length>3?' et al.':'');return`[${i+1}] ${a}. "${p.title}". ${p.journal||''}, ${p.year||''}.`;}).join('\n');
+      const fullText=Object.values(sectionTexts).join('\n\n');
+      const chunks=[];for(let i=0;i<fullText.length;i+=5000)chunks.push(fullText.slice(i,i+5000));
+      for(let i=0;i<Math.min(chunks.length,3);i++){
+        await callAI(apiKey,[{role:'user',content:`Flag unsupported claims in this ${currentDisc} text:\n\n${chunks[i]}\n\n1) Strong claims without citation 2) Overgeneralizations 3) Anachronistic interpretations. Be brief.`}],getTokens('skeptic'),0.3);
+        await callAI(apiKey,[{role:'user',content:`Validate citations in ${cite} style:\n\n${chunks[i]}\n\nRefs:\n${refs}\n\nCheck: text-ref match, consistency.`}],getTokens('verifier'),0.3);
+      }
+      const scores=[];
+      for(const[sec,txt]of Object.entries(sectionTexts)){
+        const rev=await callAI(apiKey,[{role:'user',content:`Peer review this section of a ${workTypeCtx} in ${discCtx.scoutContext}:\n\n${txt.slice(0,2000)}\n\nScore 1-5: RIGOR, COVERAGE, CLARITY, ORIGINALITY, DISCIPLINARY_APPROPRIATENESS.\nEnd with: OVERALL: X/5`}],getTokens('referee'),0.3);
+        const m=rev.match(/OVERALL[:\s]+(\d+(?:\.\d+)?)\s*\/\s*5/i);if(m)scores.push(parseFloat(m[1]));
+      }
+      if(scores.length){const avg=scores.reduce((a,b)=>a+b,0)/scores.length;qs=`${Math.round(avg/5*100)}/100 (avg ${avg.toFixed(1)}/5)`;log(`📊 Quality Score: ${qs}`,'ok');}
+      setPhase(4,'done');
+    }
+    qualityScore=qs;
+
+    // ── FASE 5: POLISH ────────────────────────────
+    let abstract='',keywords='',highlights='';
+    if(!fastMode){
+      setPhase(5,'active');setHPStep(5);
+      log('✨ ── FASE 5: POLISH ──────────────────────────','info');
+      for(const sec of Object.keys(sectionTexts)){
+        try{sectionTexts[sec]=await callAI(apiKey,[{role:'system',content:`You are a Final Editor for ${discCtx.scoutContext} academic writing. Write in ${lang}.`},{role:'user',content:`Final edit for a "${workTypeCtx}":\n\n${sectionTexts[sec]}\n\nFix grammar, disciplinary terminology, register. Return text only.`}],getTokens('polish'),temp);}catch(e){}
+      }
+      if(doEnh){
+        log('🤖 Enhancer: resumen + palabras clave...','info');
+        const enhRaw=await callAI(apiKey,[{role:'system',content:`You are a Publication Enhancer for ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Generate for this "${workTypeCtx}":\n\n${Object.values(sectionTexts).join('\n\n').slice(0,6000)}\n\nABSTRACT (250 words): Aims/Methods/Results/Conclusions\nKEYWORDS: 6-8 disciplinary keywords in ${lang} separated by semicolons\nHIGHLIGHTS: 5 key contributions max 85 chars each\n\nUse exact labels: ABSTRACT:, KEYWORDS:, HIGHLIGHTS:`}],getTokens('enhancer'),temp);
+        const absM=enhRaw.match(/ABSTRACT:([\s\S]*?)(?=KEYWORDS:|$)/i);
+        const kwM=enhRaw.match(/KEYWORDS:([\s\S]*?)(?=HIGHLIGHTS:|$)/i);
+        const hlM=enhRaw.match(/HIGHLIGHTS:([\s\S]*?)$/i);
+        abstract=absM?absM[1].trim():'';keywords=kwM?kwM[1].trim():'';highlights=hlM?hlM[1].trim():'';
+      }
+      setPhase(5,'done');
+    }
+
+    let prismaText='';
+    if(doPrisma){
+      const srcList=[useOA?'OpenAlex':'',useSS?'Semantic Scholar':'',useCR?'CrossRef':'',useAX?'arXiv':'',useEP?'Europe PMC':'',usePM?'PubMed':''].filter(Boolean).join(', ');
+      prismaText=await callAI(apiKey,[{role:'system',content:`You are a Methodology Designer for ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Write a Methodology section for this "${workTypeCtx}".\n\nSources consulted: ${srcList}\nSearch terms: ${queries.join('; ')}\nPeriod: last ${document.getElementById('years').value} years\nTotal sources found: ${allPapers.length}\n\nInclude: search strategy, inclusion/exclusion criteria, screening process, quality assessment appropriate for ${currentDisc}. ~400 words.`}],getTokens('methodology'),temp);
+    }
+    let synthText='';
+    if(doSynth){synthText=await callAI(apiKey,[{role:'system',content:`You are a Findings Synthesizer for ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Synthesize the key findings of this "${workTypeCtx}":\n\n${Object.values(sectionTexts).join('\n\n').slice(0,5000)}\n\n5-7 bullet points: main contributions, scholarly consensus, open debates, implications for practice or policy. Max 2 sentences each.`}],getTokens('results_synthesizer'),temp);}
+
+    const displaySections={...sectionTexts};
+    if(abstract)displaySections['Resumen / Abstract']=abstract+(keywords?'\n\n**Palabras clave:** '+keywords:'')+(highlights?'\n\n**Contribuciones:**\n'+highlights:'');
+    if(synthText)displaySections['Síntesis ejecutiva']=synthText;
+    if(prismaText)displaySections['Metodología de revisión']=prismaText;
+    if(trendAnalysis)displaySections['Análisis bibliométrico']=trendAnalysis;
+
+    const elapsed=Math.round((Date.now()-tStart)/1000);
+    const srcList2=[useOA?'OpenAlex':'',useSS?'Semantic Scholar':'',useCR?'CrossRef':'',useAX?'arXiv':'',useEP?'Europe PMC':'',usePM?'PubMed':''].filter(Boolean).join(', ');
+    let full=`# ${topic}\n## ${workTypeCtx}\n\n`;
+    full+=`*Humanitas · ${new Date().toLocaleDateString('es')} · ${document.getElementById('model').value} · ${cite}*\n`;
+    full+=`*Fuentes: ${srcList2} · Referencias: ${allPapers.length} · Tiempo: ${elapsed}s · Score: ${qs}*\n\n---\n\n`;
+    Object.entries(displaySections).forEach(([sec,txt])=>{full+=`## ${sec}\n\n${txt}\n\n`;});
+    full+=`---\n\n## Referencias bibliográficas\n\n`;
+    allPapers.slice(0,40).forEach((p,i)=>{const a=p.authors.slice(0,3).join(', ')+(p.authors.length>3?' et al.':'');full+=`[${i+1}] ${a||'Unknown'}. "${p.title}". ${p.journal||''}${p.year?', '+p.year:''}. ${p.doi?'DOI: https://doi.org/'+p.doi:p.url||''}\n`;});
+    generatedText=full;
+    sectionTextsStore={...displaySections};
+
+    setHPStep(6);
+    const words=Object.values(displaySections).join(' ').split(/\s+/).length;
+    log(`🎉 ¡Completado en ${elapsed}s! ${allPapers.length} fuentes · ${sections.length} secciones · Score: ${qs}`,'ok');
+
+    renderOutputSections(displaySections,allPapers,gapsText,{time:elapsed+'s',score:qs});
+    document.getElementById('exportRow').style.display='flex';
+
+    if(gapsText){
+      const ga=document.getElementById('gapsArea');ga.innerHTML='';
+      const gl=document.createElement('div');gl.className='gaps-list fi';
+      gapsText.split(/\nGAP \[?\d+\]?:/i).filter(Boolean).forEach((g,i)=>{const lines=g.trim().split('\n');const card=document.createElement('div');card.className='gap-card';card.innerHTML=`<h4>LAGUNA ${i+1}: ${lines[0].replace(/^[:.\s]+/,'').trim()}</h4><p>${lines.slice(1).join('<br>').trim()}</p>`;gl.appendChild(card);});
+      ga.appendChild(gl);
+    }
+
+    saveToHistory(topic,words,sections.length,elapsed+'s');
+    localStorage.removeItem('humanitas_draft');
+    showMain('output');
+    document.getElementById('outputBadge').style.display='';
+
+  }catch(e){
+    if(e.message==='__STOPPED__'){
+      log('⏹ Generación detenida por el usuario.','warn');
+    } else {
+      log('❌ Error: '+e.message,'err');
+      if(e.message.includes('401'))log('💡 API key incorrecta. Verifica en platform.openai.com/api-keys','warn');
+      else if(e.message.includes('429'))log('💡 Rate limit. Espera unos segundos.','warn');
+      else if(e.message.includes('insufficient_quota'))log('💡 Cuota agotada. Añade créditos en platform.openai.com/billing','warn');
+    }
+    if(Object.keys(sectionTextsStore).length>0){
+      log('💾 Guardando borrador parcial...','warn');
+      renderOutputSections(sectionTextsStore,allPapersStore,gapsStore,{time:Math.round((Date.now()-tStart)/1000)+'s',score:'N/A'});
+      document.getElementById('partialBadge').style.display='flex';
+      document.getElementById('exportRow').style.display='flex';
+      document.getElementById('outputBadge').style.display='';
+    }
+  }finally{
+    isRunning=false;shouldStop=false;
+    document.getElementById('btnGen').disabled=false;document.getElementById('btnGen').innerHTML='▶ Generar';
+    document.getElementById('btnStop').disabled=true;
+    document.getElementById('btnGenWizard').disabled=false;document.getElementById('btnGenWizard').innerHTML='▶ Generar revisión';
+    document.getElementById('btnStopWizard').disabled=true;
+  }
+}
+
+// ═══════════════════════════════════════════════════
+//  EXPORT
+// ═══════════════════════════════════════════════════
+function slug(){return(document.getElementById('topic').value||'revision').replace(/\s+/g,'_').slice(0,40);}
+function exportMarkdown(){if(!generatedText)return;dl(`humanitas_${slug()}.md`,generatedText,'text/markdown');log('⬇ Markdown descargado.','ok');}
+function exportTxt(){if(!generatedText)return;dl(`humanitas_${slug()}.txt`,generatedText,'text/plain');log('⬇ Texto descargado.','ok');}
+
+function exportWord(){
+  if(!generatedText)return;
+  const date=new Date().toLocaleDateString('es');
+  let html=generatedText.replace(/^# (.+)$/mg,'<h1>$1</h1>').replace(/^## (.+)$/mg,'<h2>$1</h2>').replace(/^### (.+)$/mg,'<h3>$1</h3>').replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>').replace(/\*(.+?)\*/g,'<em>$1</em>').replace(/\[(.+?)\]\((.+?)\)/g,'<a href="$2">$1</a>').replace(/^---$/mg,'<hr>').replace(/^\| .+$/mg,'').replace(/^- (.+)$/mg,'<li>$1</li>').split('\n\n').map(p=>p.startsWith('<')?p:`<p>${p}</p>`).join('\n');
+  const doc=`<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View></w:WordDocument></xml><![endif]--><style>@page{margin:2.5cm 3cm}body{font-family:"Times New Roman",serif;font-size:12pt;line-height:1.6}h1{font-size:18pt;text-align:center;color:#3b0764}h2{font-size:14pt;color:#3b0764;border-bottom:1pt solid #ccc;margin-top:18pt}p{text-align:justify;margin:6pt 0}.meta{font-size:10pt;color:#666;text-align:center;font-style:italic}</style></head><body><p class="meta">Humanitas · ${date} · Fuentes: ${allPapersStore.length}</p>${html}</body></html>`;
+  dl(`humanitas_${slug()}.doc`,doc,'application/msword');
+  log('⬇ Word descargado.','ok');
+}
+
+function exportLatex(){
+  if(!generatedText)return;
+  const date=new Date().toISOString().slice(0,10);
+  const esc=t=>(t||'').replace(/\\/g,'\\textbackslash{}').replace(/&/g,'\\&').replace(/%/g,'\\%').replace(/\$/g,'\\$').replace(/#/g,'\\#').replace(/_/g,'\\_').replace(/\{/g,'\\{').replace(/\}/g,'\\}').replace(/~/g,'\\textasciitilde{}').replace(/\^/g,'\\textasciicircum{}');
+  let body='',titleSet=false;
+  for(const line of generatedText.split('\n')){
+    if(line.startsWith('# ')&&!titleSet){body+=`\\title{${esc(line.slice(2))}}\n\\maketitle\n\n`;titleSet=true;}
+    else if(line.startsWith('## ')){body+=`\n\\section{${esc(line.slice(3))}}\n`;}
+    else if(line.startsWith('### ')){body+=`\n\\subsection{${esc(line.slice(4))}}\n`;}
+    else if(line.startsWith('- ')){body+=`\\begin{itemize}\\item ${esc(line.slice(2))}\\end{itemize}\n`;}
+    else if(line.match(/^\[\d+\] /)){body+=`\\noindent${esc(line)}\n\n`;}
+    else if(line==='---'){body+=`\n\\vspace{6mm}\\hrule\\vspace{6mm}\n`;}
+    else if(line.match(/^\*/)){/* skip meta */}
+    else if(line.trim()){body+=esc(line)+'\n\n';}
+  }
+  const latex=`% Humanitas · ${date}\n\\documentclass[12pt,a4paper]{article}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\usepackage{hyperref}\n\\usepackage{geometry}\n\\usepackage{times}\n\\geometry{margin=2.5cm}\n\\hypersetup{colorlinks=true,linkcolor=blue,urlcolor=blue}\n\\author{Humanitas Review Generator}\n\\date{${date}}\n\\begin{document}\n\n${body}\n\n\\end{document}\n`;
+  dl(`humanitas_${slug()}.tex`,latex,'text/plain');
+  log('⬇ LaTeX descargado.','ok');
+}
+
+function copyClipboard(){if(!generatedText)return;navigator.clipboard.writeText(generatedText).then(()=>{log('📋 Copiado al portapapeles.','ok');const btn=event.target;const o=btn.textContent;btn.textContent='✅ Copiado!';setTimeout(()=>btn.textContent=o,2000);});}
+function dl(filename,content,type){const blob=new Blob([content],{type});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=filename;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
+</script>
+</body>
+</html>
