@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob:; connect-src *; img-src * data: blob:; font-src * data:;">
-<title>Humanitas — Generador de Revisiones</title>
+<title>Humanitas v2 — Revisiones con citas verificadas</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Source+Sans+3:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -316,9 +316,9 @@ textarea{resize:vertical;min-height:68px}
       <h2>Bienvenido a Humanitas</h2>
       <p>Genera revisiones académicas en Ciencias Sociales, Humanidades y Ciencias Jurídicas de forma automática. Conecta con las principales bases de datos de estas disciplinas y obtén un trabajo completo en minutos.</p>
       <div class="onboard-steps">
-        <div class="ostep"><div class="ostep-icon">🔍</div><div class="ostep-title">Fuentes especializadas</div><div class="ostep-desc">JSTOR, SSRN, PhilPapers, HeinOnline, Dialnet, OpenAlex y más repositorios para humanidades y derecho</div></div>
-        <div class="ostep"><div class="ostep-icon">🤖</div><div class="ostep-title">Agentes adaptativos</div><div class="ostep-desc">Pipeline de 5 fases calibrado para análisis hermenéutico, interpretación jurídica y crítica social</div></div>
-        <div class="ostep"><div class="ostep-icon">📄</div><div class="ostep-title">Exporta en 4 formatos</div><div class="ostep-desc">Word, LaTeX, Markdown o texto plano con citas en MLA, Chicago, APA o Harvard</div></div>
+        <div class="ostep"><div class="ostep-icon">🔍</div><div class="ostep-title">Fuentes especializadas</div><div class="ostep-desc">OpenAlex, Semantic Scholar, CrossRef, Europe PMC, arXiv y PubMed, con deduplicación por DOI. Importa además tu propia bibliografía en BibTeX o RIS</div></div>
+        <div class="ostep"><div class="ostep-icon">🤖</div><div class="ostep-title">Agentes adaptativos</div><div class="ostep-desc">Cinco fases calibradas para el análisis hermenéutico, la interpretación jurídica y la crítica social, con verificación determinista de cada cita</div></div>
+        <div class="ostep"><div class="ostep-icon">📄</div><div class="ostep-title">Exporta en 4 formatos</div><div class="ostep-desc">Word (.docx real), LaTeX, Markdown, BibTeX y la traza de la ejecución en JSON, con citas en MLA, Chicago, APA o Harvard</div></div>
       </div>
       <button class="btn btn-primary" style="width:100%;padding:12px;font-size:14px" onclick="nextOnboard(2)">Continuar →</button>
     </div>
@@ -411,6 +411,7 @@ textarea{resize:vertical;min-height:68px}
     <div class="tab active" id="tab-wizard"  onclick="showMain('wizard')">✨ Nueva revisión</div>
     <div class="tab"       id="tab-output"  onclick="showMain('output')">📄 Artículo <span id="outputBadge" class="tab-badge" style="display:none"></span></div>
     <div class="tab"       id="tab-gaps"    onclick="showMain('gaps')">🔍 Lagunas</div>
+    <div class="tab"       id="tab-audit"   onclick="showMain('audit')">🧪 Auditoría <span id="auditBadge" class="tab-badge" style="display:none"></span></div>
     <div class="tab"       id="tab-history" onclick="showMain('history')">🕓 Historial</div>
     <div class="tab"       id="tab-agents"  onclick="showMain('agents')">🤖 Agentes</div>
     <div class="tab"       id="tab-sources" onclick="showMain('sources')">📚 Fuentes</div>
@@ -579,7 +580,7 @@ textarea{resize:vertical;min-height:68px}
             <div class="tooltip-wrap"><span class="tip-icon">?</span><div class="tip-box">Rango de años. En Humanidades es frecuente revisar fuentes históricas más antiguas; considera ampliar el rango.</div></div>
           </label>
           <div class="slider-row">
-            <input type="range" id="years" min="3" max="50" step="1" value="20" oninput="document.getElementById('yearsv').textContent='Últimos '+this.value+' años'">
+            <input type="range" id="years" min="3" max="80" step="1" value="30" oninput="document.getElementById('yearsv').textContent='Últimos '+this.value+' años'">
             <span class="slider-val" id="yearsv">Últimos 20 años</span>
           </div>
         </div>
@@ -588,6 +589,8 @@ textarea{resize:vertical;min-height:68px}
             <div class="tooltip-wrap"><span class="tip-icon">?</span><div class="tip-box">gpt-4o-mini: rápido y económico. gpt-4o: mayor calidad argumentativa, recomendado para análisis jurídico complejo.</div></div>
           </label>
           <select id="model" onchange="updateEstimate()">
+            <option value="gpt-4.1-mini">gpt-4.1-mini — mejor seguimiento de instrucciones</option>
+            <option value="gpt-4.1">gpt-4.1 — contexto largo, alta calidad</option>
             <option value="gpt-4o-mini">gpt-4o-mini — rápido y económico ✅</option>
             <option value="gpt-4o">gpt-4o — alta calidad argumentativa</option>
             <option value="gpt-4-turbo">gpt-4-turbo</option>
@@ -611,6 +614,12 @@ textarea{resize:vertical;min-height:68px}
         <div class="toggle-row"><div><div class="tl">🎯 Resumen ejecutivo + palabras clave (enhancer)</div><div class="ts">Abstract 250p, keywords y 5 contribuciones principales</div></div><div class="tsw on" id="tog-enhancer" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
         <div class="toggle-row"><div><div class="tl">📝 Metodología de revisión (methodology)</div><div class="ts">Sección de metodología con criterios de búsqueda y selección</div></div><div class="tsw on" id="tog-prisma" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
         <div class="toggle-row"><div><div class="tl">📊 Síntesis de hallazgos (results_synthesizer)</div><div class="ts">Resumen de 5-7 puntos clave para no especialistas</div></div><div class="tsw on" id="tog-synth" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">🧪 Auditoría de contenido (skeptic + verifier)</div><div class="ts">Afirmaciones sin respaldo y encaje entre cita y obra. Los hallazgos van a la pestaña Auditoría</div></div><div class="tsw on" id="tog-audit" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">📋 Revisar las fuentes antes de redactar</div><div class="ts">Muestra las obras recuperadas y permite cancelar antes de gastar tokens en la redacción</div></div><div class="tsw on" id="tog-checkpoint" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><div><div class="tl">🚩 Excluir obras retractadas</div><div class="ts">Comprueba cada DOI en OpenAlex antes de escribir. Sin coste de tokens</div></div><div class="tsw on" id="tog-retract" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><div><div class="tl">🎨 Pulido de estilo por sección (narrator)</div><div class="ts">Tercera reescritura del texto. Encarece y aleja el resultado de las fuentes: desactivado por defecto</div></div><div class="tsw" id="tog-narrator" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
+        <div class="toggle-row"><div><div class="tl">📡 Vista previa en streaming</div><div class="ts">Muestra el texto según se genera</div></div><div class="tsw on" id="tog-stream" onclick="this.classList.toggle('on')"></div></div>
+        <div class="toggle-row"><div><div class="tl">🕰 Periodo flexible (recomendado)</div><div class="ts">El rango de años orienta las búsquedas pero no descarta obras anteriores. Desactívalo solo si quieres una revisión estrictamente acotada: aun así se conservan las monografías</div></div><div class="tsw on" id="tog-yearsoft" onclick="this.classList.toggle('on')"></div></div>
         <div class="toggle-row"><div><div class="tl">⚡ Modo rápido (salta fases 4-5)</div><div class="ts">Sin validación ni polish — más rápido, menor calidad</div></div><div class="tsw" id="tog-fast" onclick="this.classList.toggle('on');updateEstimate()"></div></div>
       </div>
       <div class="wizard-nav">
@@ -642,6 +651,14 @@ textarea{resize:vertical;min-height:68px}
         <div class="ph" id="ph5"><div class="pnum">5</div>Polish</div>
       </div>
 
+      <div id="liveCostWrap" style="display:none;margin:10px 0;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:#faf8f5;font-size:12px;color:var(--t2);gap:8px;align-items:center">
+        <span>💰</span><span>Consumo real de esta ejecución:</span><strong id="liveCost" style="color:var(--accent)">$0.0000</strong><span id="liveAgent" style="margin-left:auto;color:var(--t3)"></span>
+      </div>
+      <div id="streamBox" style="display:none;margin:10px 0;border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <div style="padding:7px 12px;background:#f3f0ec;font-size:12px;font-weight:500;color:var(--text)" id="streamTitle">✍️</div>
+        <div id="streamBody" style="padding:12px;max-height:220px;overflow-y:auto;font-size:12.5px;line-height:1.7;color:var(--t2);white-space:pre-wrap"></div>
+      </div>
+
       <div class="human-progress" id="humanProgress">
         <div id="hpSteps"></div>
         <div class="prog-bar-wrap"><div class="prog-fill" id="progFill"></div></div>
@@ -666,15 +683,15 @@ textarea{resize:vertical;min-height:68px}
   <!-- ══════ PANEL: OUTPUT ══════ -->
   <div class="tc content" id="tc-output">
     <div class="stats-row" id="statsRow" style="display:none">
-      <div class="stat"><div class="sv" id="sPapers">—</div><div class="sl">Fuentes</div></div>
+      <div class="stat"><div class="sv" id="sPapers">—</div><div class="sl" id="sPapersLabel">Obras citadas</div></div>
       <div class="stat"><div class="sv" id="sWords">—</div><div class="sl">Palabras</div></div>
       <div class="stat"><div class="sv" id="sSecs">—</div><div class="sl">Secciones</div></div>
       <div class="stat"><div class="sv" id="sTime">—</div><div class="sl">Tiempo</div></div>
-      <div class="stat"><div class="sv" id="sScore">—</div><div class="sl">Calidad</div></div>
+      <div class="stat"><div class="sv" id="sScore">—</div><div class="sl" id="sScoreLabel">Citas resueltas</div></div>
     </div>
     <div class="qbar fi" id="qualityBar" style="display:none">
-      <div class="qb-item">✅ Score: <strong id="qbScore">—</strong></div>
-      <div class="qb-item">📚 <strong id="qbPapers">—</strong> fuentes</div>
+      <div class="qb-item">✅ Citas resueltas: <strong id="qbScore">—</strong></div>
+      <div class="qb-item">📚 <strong id="qbPapers">—</strong> obras citadas</div>
       <div class="qb-item">📝 <strong id="qbSecs">—</strong> secciones</div>
       <div class="qb-item">⏱ <strong id="qbTime">—</strong></div>
       <div class="qb-item" id="partialBadge" style="display:none">⚠️ <strong style="color:var(--amber)">Borrador parcial guardado</strong></div>
@@ -684,11 +701,19 @@ textarea{resize:vertical;min-height:68px}
     </div>
     <div class="export-row" id="exportRow" style="display:none">
       <button class="btn btn-success" onclick="exportMarkdown()">⬇ Markdown (.md)</button>
-      <button class="btn btn-primary" onclick="exportWord()">⬇ Word (.doc)</button>
+      <button class="btn btn-primary" onclick="exportDocx()">⬇ Word (.docx)</button>
       <button class="btn btn-amber"   onclick="exportLatex()">⬇ LaTeX (.tex)</button>
+      <button class="btn"             onclick="exportBibtex()">⬇ BibTeX (.bib)</button>
+      <button class="btn"             onclick="exportRunJson()" title="Traza completa: consultas, corpus, métricas y consumo">⬇ Ejecución (.json)</button>
       <button class="btn"             onclick="exportTxt()">⬇ Texto (.txt)</button>
-      <button class="btn"             onclick="copyClipboard()">📋 Copiar todo</button>
+      <button class="btn"             onclick="copyClipboard()">📋 Copiar</button>
     </div>
+  </div>
+
+  <!-- ══════ PANEL: AUDIT ══════ -->
+  <div class="tc content" id="tc-audit">
+    <div class="ibox" style="margin-bottom:14px"><span>🧪</span><span>Aquí se comprueba lo que el texto afirma de sí mismo: qué proporción de citas resuelve contra obras reales, qué señalaron los agentes validadores y cuánto ha costado. La verificación de citas se hace <strong>en JavaScript</strong>, no se le pregunta al modelo.</span></div>
+    <div id="auditArea"><div class="placeholder"><div class="bi">🧪</div><p>Las métricas de integridad aparecerán aquí tras generar una revisión.</p></div></div>
   </div>
 
   <!-- ══════ PANEL: GAPS ══════ -->
@@ -752,7 +777,14 @@ textarea{resize:vertical;min-height:68px}
     <div class="sh">⚙️ Opciones avanzadas</div>
     <div class="form-grid">
       <div class="field"><label>Email cortesía NCBI / OpenAlex</label><input type="email" id="pubmedEmail" value="humanitas@app.io" placeholder="tu@email.com"></div>
-      <div class="field"><label>Ordenar fuentes por</label><select id="sortPapers"><option value="citations">Citas (descendente)</option><option value="year">Año (descendente)</option><option value="source">Fuente</option></select></div>
+      <div class="field"><label>Ordenar fuentes por</label><select id="sortPapers"><option value="relevance">Relevancia disciplinar (recomendado)</option><option value="citations">Citas brutas (descendente)</option><option value="year">Año (descendente)</option><option value="source">Fuente</option></select></div>
+      <div class="field"><label>Búsquedas simultáneas</label><input type="number" id="concurrency" value="4" min="1" max="8"></div>
+      <div class="field"><label>Clave propia de Semantic Scholar (opcional)</label><input type="password" id="ssKey" placeholder="opcional — sube tu cuota" oninput="localStorage.setItem('humanitas_sskey',this.value)"></div>
+      <div class="field form-full">
+        <div class="ibox" style="margin:6px 0"><span>📥</span><span><strong>Corpus propio.</strong> En humanidades y derecho la bibliografía nuclear suele ser monográfica y está mal indexada en estas bases. Importa tu BibTeX, RIS o una lista de DOI: esas obras entran en el corpus citable y tienen prioridad al deduplicar.</span></div>
+      </div>
+      <div class="field"><label>Importar bibliografía (.bib, .ris, lista de DOI)</label><input type="file" accept=".bib,.ris,.txt,.csv,.json" onchange="handleCorpusImport(this)"></div>
+      <div class="field"><label>Estado</label><div id="importInfo" style="font-size:12px;color:var(--t3);padding-top:8px">Ninguna obra propia cargada.</div></div>
     </div>
   </div>
 
@@ -865,13 +897,18 @@ document.addEventListener('DOMContentLoaded',()=>{
   const saved=localStorage.getItem('humanitas_apikey');
   if(saved){document.getElementById('apiKey').value=saved;document.getElementById('saveKey').checked=true;document.getElementById('btnForget').style.display='';updateAv(saved);}
   if(localStorage.getItem('humanitas_onboard_done')){document.getElementById('onboardOverlay').style.display='none';}
+  const ss=localStorage.getItem('humanitas_sskey');
+  if(ss&&document.getElementById('ssKey'))document.getElementById('ssKey').value=ss;
   selectDisc('social');
   buildAgentTable();
   updateEstimate();
-  renderHistory();
   buildHPSteps();
-  const draft=localStorage.getItem('humanitas_draft');
-  if(draft){try{const d=JSON.parse(draft);if(d.text){showDraftBanner(d);}}catch(e){}}
+  (async()=>{
+    await migrateStorage();
+    await renderHistory();
+    const d=await idbGet('draft');
+    if(d&&d.text)showDraftBanner(d);
+  })();
 });
 
 // ═══════════════════════════════════════════════════
@@ -913,6 +950,7 @@ function selectWorkType(el,type){
 //  MAIN NAV
 // ═══════════════════════════════════════════════════
 const PANEL_META={
+  audit:{title:'Auditoría y métricas',sub:'Integridad de las citas, hallazgos de los validadores y consumo real'},
   wizard:{title:'Nueva revisión',sub:'Configura tu disciplina, tipo de trabajo y genera un artículo académico completo'},
   output:{title:'Artículo generado',sub:'Edita, descarga o copia tu revisión'},
   gaps:{title:'Lagunas detectadas',sub:'Vacíos doctrinales identificados automáticamente'},
@@ -978,6 +1016,8 @@ function applyPreset(key){
 //  COST ESTIMATOR
 // ═══════════════════════════════════════════════════
 const MODEL_COSTS={
+  'gpt-4.1-mini':{in:0.4,out:1.6},
+  'gpt-4.1':{in:2,out:8},
   'gpt-4o-mini':{in:0.15,out:0.6},
   'gpt-4o':{in:2.5,out:10},
   'gpt-4-turbo':{in:10,out:30},
@@ -988,17 +1028,19 @@ function updateEstimate(){
   const model=document.getElementById('model')?.value||'gpt-4o-mini';
   const fastMode=document.getElementById('tog-fast')?.classList.contains('on');
   const sources=['oa','ss','cr','ax','ep','pm'].filter(s=>document.getElementById('chk-'+s)?.checked);
-  const extras=['gaps','biblio','thread','enhancer','prisma','synth'].filter(t=>document.getElementById('tog-'+t)?.classList.contains('on'));
+  const extras=['gaps','biblio','thread','enhancer','prisma','synth','audit','narrator'].filter(t=>document.getElementById('tog-'+t)?.classList.contains('on'));
+  const narrator=document.getElementById('tog-narrator')?.classList.contains('on');
+  const audit=document.getElementById('tog-audit')?.classList.contains('on');
   const baseTokens=35000;
   const writingTokens=Math.floor(wc*1.8);
-  const extraTokens=extras.length*2000+(fastMode?0:15000);
+  const extraTokens=extras.length*2000+(fastMode?0:15000)+(narrator?Math.floor(wc*1.6):0)+(audit&&!fastMode?Math.floor(wc*0.9):0);
   const totalTokens=baseTokens+writingTokens+extraTokens;
   const cost=MODEL_COSTS[model]||MODEL_COSTS['gpt-4o-mini'];
   const estCost=((totalTokens/2*cost.in/1e6)+(totalTokens/2*cost.out/1e6));
   const estMinutes=fastMode?Math.round(3+sources.length*0.5+wc/2000):Math.round(8+sources.length*0.8+wc/1200+extras.length*0.5);
   const setEl=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
   setEl('estTime',`~${estMinutes} min`);
-  setEl('estCost',`~$${estCost.toFixed(2)}`);
+  setEl('estCost',`~$${estCost.toFixed(estCost<0.1?3:2)}`);
   setEl('estWords',wc.toLocaleString());
   setEl('estSources',sources.length);
   setEl('estModel',model);
@@ -1074,15 +1116,50 @@ function setPhase(n,s){const el=document.getElementById('ph'+n);if(!el)return;el
 // ═══════════════════════════════════════════════════
 //  OPENAI CALL
 // ═══════════════════════════════════════════════════
-async function callAI(apiKey,messages,maxTokens=1500,temp=0.7){
+function setLiveAgent(id){const el=document.getElementById('liveAgent');if(el)el.textContent=id?('🤖 '+id):'';}
+async function callAgent(agentId,apiKey,messages,maxTokens,temp,stream){
+  setLiveAgent(agentId);
+  return await callAI(apiKey,messages,maxTokens,temp,stream?streamAppend:null,agentId);
+}
+async function callAI(apiKey,messages,maxTokens=1500,temp=0.7,onDelta=null,agentId='ad-hoc'){
   const model=document.getElementById('model').value;
   const retries=parseInt(document.getElementById('maxRetries').value)||3;
+  const wantStream=!!onDelta&&document.getElementById('tog-stream')?.classList.contains('on');
   for(let attempt=0;attempt<retries;attempt++){
     if(shouldStop)throw new Error('__STOPPED__');
     try{
-      const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify({model,messages,max_tokens:maxTokens,temperature:temp})});
+      const body={model,messages,max_tokens:maxTokens,temperature:temp};
+      if(wantStream){body.stream=true;body.stream_options={include_usage:true};}
+      const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+apiKey},body:JSON.stringify(body)});
       if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e?.error?.message||'HTTP '+r.status);}
-      return(await r.json()).choices[0].message.content;
+      if(!wantStream){
+        const j=await r.json();
+        addUsage(agentId,j.usage);
+        return j.choices[0].message.content;
+      }
+      const reader=r.body.getReader();const dec=new TextDecoder();
+      let buf='',out='';
+      while(true){
+        if(shouldStop){try{reader.cancel();}catch(e){}throw new Error('__STOPPED__');}
+        const {done,value}=await reader.read();
+        if(done)break;
+        buf+=dec.decode(value,{stream:true});
+        const lines=buf.split('\n');buf=lines.pop();
+        for(const line of lines){
+          const t=line.trim();
+          if(!t.startsWith('data:'))continue;
+          const payload=t.slice(5).trim();
+          if(payload==='[DONE]')continue;
+          try{
+            const j=JSON.parse(payload);
+            if(j.usage)addUsage(agentId,j.usage);
+            const d=j.choices?.[0]?.delta?.content;
+            if(d){out+=d;onDelta(d);}
+          }catch(e){}
+        }
+      }
+      return out;
     }catch(e){
       if(e.message==='__STOPPED__')throw e;
       if(attempt<retries-1){const w=Math.pow(2,attempt)*1000;log(`⚠ Reintento ${attempt+1}/${retries}: ${e.message} (${w/1000}s)...`,'warn');await new Promise(r=>setTimeout(r,w));}
@@ -1092,136 +1169,1054 @@ async function callAI(apiKey,messages,maxTokens=1500,temp=0.7){
 }
 
 // ═══════════════════════════════════════════════════
-//  SEARCH ENGINES
+//  v2.0 CORE — Humanitas
+//  Citas ancladas, verificación determinista, métricas
+//  Adaptado a Humanidades · CC. Sociales · Derecho
 // ═══════════════════════════════════════════════════
-async function searchSS(q,max){const p=new URLSearchParams({query:q,limit:Math.min(max,100),offset:0,fields:'paperId,title,abstract,year,authors,venue,citationCount,url,externalIds'});try{const r=await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${p}`,{headers:{'x-api-key':'uXw4IjvzYg7lLJSR7g3uJ3HQS6rhsgRO6lBbQTWB'}});if(!r.ok)throw new Error('SS '+r.status);return((await r.json()).data||[]).map(p=>({title:p.title||'',authors:(p.authors||[]).slice(0,4).map(a=>a.name),year:String(p.year||''),journal:p.venue||'',abstract:(p.abstract||'').slice(0,500),citations:p.citationCount||0,url:p.url||'',doi:(p.externalIds||{}).DOI||'',source:'Semantic Scholar',oa_status:''}));}catch(e){log('⚠ Semantic Scholar: '+e.message,'warn');return[];}}
+const APP_VERSION='2.0';
 
-async function searchOA(q,max){const email=document.getElementById('pubmedEmail')?.value||'humanitas@app.io';try{const p=new URLSearchParams({search:q,per_page:Math.min(max,200),page:1,select:'id,title,abstract_inverted_index,publication_year,authorships,primary_location,cited_by_count,doi,open_access',mailto:email});const r=await fetch(`https://api.openalex.org/works?${p}`);if(!r.ok)throw new Error('OA '+r.status);return((await r.json()).results||[]).map(w=>{let abstract='';try{if(w.abstract_inverted_index){const pos=[];Object.entries(w.abstract_inverted_index).forEach(([word,positions])=>positions.forEach(p=>pos.push([p,word])));abstract=pos.sort((a,b)=>a[0]-b[0]).map(x=>x[1]).join(' ').slice(0,500);}}catch(e){}return{title:w.title||'',authors:(w.authorships||[]).slice(0,4).map(a=>a.author?.display_name||''),year:String(w.publication_year||''),journal:w.primary_location?.source?.display_name||'',abstract,citations:w.cited_by_count||0,url:w.id||'',doi:(w.doi||'').replace('https://doi.org/',''),source:'OpenAlex',oa_status:w.open_access?.oa_status||''};}).filter(p=>p.title);}catch(e){log('⚠ OpenAlex: '+e.message,'warn');return[];}}
+/* ── 1. Escapado de todo contenido ajeno ── */
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 
-async function searchCR(q,max){const email=document.getElementById('pubmedEmail')?.value||'humanitas@app.io';try{const p=new URLSearchParams({query:q,rows:Math.min(max,100),select:'DOI,title,author,published,container-title,abstract,is-referenced-by-count,URL',mailto:email});const r=await fetch(`https://api.crossref.org/works?${p}`);if(!r.ok)throw new Error('CR '+r.status);return(((await r.json()).message||{}).items||[]).map(w=>{const year=w.published?.['date-parts']?.[0]?.[0]||'';const doi=w.DOI||'';return{title:(Array.isArray(w.title)?w.title[0]:w.title)||'',authors:(w.author||[]).slice(0,4).map(a=>`${a.family||''} ${(a.given||'')[0]||''}`.trim()),year:String(year),journal:(Array.isArray(w['container-title'])?w['container-title'][0]:w['container-title'])||'',abstract:(w.abstract||'').replace(/<[^>]+>/g,'').slice(0,500),citations:w['is-referenced-by-count']||0,url:doi?`https://doi.org/${doi}`:'',doi,source:'CrossRef',oa_status:''};}).filter(p=>p.title);}catch(e){log('⚠ CrossRef: '+e.message,'warn');return[];}}
+/* ── 2. Concurrencia limitada ── */
+async function pMap(items,fn,limit=4){
+  const out=new Array(items.length);let i=0;
+  const workers=Array.from({length:Math.min(limit,items.length||1)},async()=>{
+    while(i<items.length){const idx=i++;try{out[idx]=await fn(items[idx],idx);}catch(e){out[idx]=null;}}
+  });
+  await Promise.all(workers);
+  return out;
+}
 
-async function searchAX(q,max){try{const arxivUrl=`https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(q.replace(/\s+/g,'+'))}&start=0&max_results=${max}`;const r=await fetch(`https://corsproxy.io/?url=${encodeURIComponent(arxivUrl)}`);if(!r.ok)throw new Error('arXiv '+r.status);const xml=new DOMParser().parseFromString(await r.text(),'application/xml');return Array.from(xml.querySelectorAll('entry')).map(e=>({title:(e.querySelector('title')?.textContent||'').replace(/\s+/g,' ').trim(),authors:Array.from(e.querySelectorAll('author name')).slice(0,4).map(a=>a.textContent),year:(e.querySelector('published')?.textContent||'').slice(0,4),journal:'arXiv',abstract:(e.querySelector('summary')?.textContent||'').slice(0,500).replace(/\s+/g,' '),citations:0,url:e.querySelector('id')?.textContent||'',doi:e.querySelector("link[title='doi']")?.getAttribute('href')||'',source:'arXiv',oa_status:'gold'})).filter(p=>p.title);}catch(e){log('⚠ arXiv: '+e.message,'warn');return[];}}
+/* ── 3. Consumo real de tokens y coste ── */
+const RUN={usage:{},inTok:0,outTok:0,calls:0};
+function resetUsage(){RUN.usage={};RUN.inTok=0;RUN.outTok=0;RUN.calls=0;updateLiveCost();}
+function addUsage(agentId,u){
+  if(!u)return;
+  const a=RUN.usage[agentId]||(RUN.usage[agentId]={in:0,out:0,calls:0});
+  a.in+=u.prompt_tokens||0;a.out+=u.completion_tokens||0;a.calls++;
+  RUN.inTok+=u.prompt_tokens||0;RUN.outTok+=u.completion_tokens||0;RUN.calls++;
+  updateLiveCost();
+}
+function runCost(){
+  const model=document.getElementById('model')?.value||'gpt-4o-mini';
+  const c=MODEL_COSTS[model]||MODEL_COSTS['gpt-4o-mini'];
+  return RUN.inTok*c.in/1e6+RUN.outTok*c.out/1e6;
+}
+function updateLiveCost(){
+  const el=document.getElementById('liveCost');if(!el)return;
+  el.textContent=`$${runCost().toFixed(4)} · ${(RUN.inTok+RUN.outTok).toLocaleString()} tok · ${RUN.calls} llamadas`;
+  const w=document.getElementById('liveCostWrap');if(w)w.style.display=RUN.calls?'flex':'none';
+}
+function usageTable(){
+  const model=document.getElementById('model')?.value||'gpt-4o-mini';
+  const c=MODEL_COSTS[model]||MODEL_COSTS['gpt-4o-mini'];
+  return Object.entries(RUN.usage).sort((a,b)=>(b[1].in+b[1].out)-(a[1].in+a[1].out))
+    .map(([id,u])=>({agent:id,calls:u.calls,in:u.in,out:u.out,cost:u.in*c.in/1e6+u.out*c.out/1e6}));
+}
 
-async function searchEPMC(q,max){try{const p=new URLSearchParams({query:q,format:'json',pageSize:Math.min(max,100),resultType:'core',sort:'CITED desc'});const r=await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?${p}`);if(!r.ok)throw new Error('EPMC '+r.status);return(((await r.json()).resultList||{}).result||[]).map(a=>({title:a.title||'',authors:(a.authorString||'').split(',').slice(0,4).map(s=>s.trim()),year:String(a.pubYear||''),journal:a.journalTitle||'',abstract:(a.abstractText||'').slice(0,500),citations:a.citedByCount||0,url:a.pmid?`https://europepmc.org/article/MED/${a.pmid}`:(a.doi?`https://doi.org/${a.doi}`:''),doi:a.doi||'',source:'Europe PMC',oa_status:a.inEPMC==='Y'?'open':''})).filter(p=>p.title);}catch(e){log('⚠ EuropePMC: '+e.message,'warn');return[];}}
+/* ── 4. Normalización, deduplicación y fusión ── */
+function normDOI(d){
+  if(!d)return '';
+  return String(d).toLowerCase().replace(/^https?:\/\/(dx\.)?doi\.org\//,'').replace(/^doi:/,'').trim();
+}
+function normTitle(t){
+  return String(t||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+}
+function jaccard(a,b){
+  const A=new Set(a.split(' ')),B=new Set(b.split(' '));
+  if(!A.size||!B.size)return 0;
+  let inter=0;A.forEach(x=>{if(B.has(x))inter++;});
+  return inter/(A.size+B.size-inter);
+}
+const SRC_RANK={'OpenAlex':5,'Semantic Scholar':5,'CrossRef':4,'Europe PMC':3,'PubMed':3,'arXiv':3,'Importado':6};
+function mergeRecords(a,b){
+  const m={...a};
+  m.title=(a.title||'').length>=(b.title||'').length?a.title:b.title;
+  m.abstract=(a.abstract||'').length>=(b.abstract||'').length?a.abstract:b.abstract;
+  m.authors=(a.authors||[]).length>=(b.authors||[]).length?a.authors:b.authors;
+  m.year=a.year||b.year;
+  m.journal=(a.journal||'').length>=(b.journal||'').length?a.journal:b.journal;
+  m.publisher=a.publisher||b.publisher;
+  m.itemType=(a.itemType&&a.itemType!=='article')?a.itemType:(b.itemType||a.itemType||'article');
+  m.citations=Math.max(a.citations||0,b.citations||0);
+  m.doi=normDOI(a.doi)||normDOI(b.doi);
+  m.url=a.url||b.url;
+  m.oa_status=a.oa_status||b.oa_status;
+  m.retracted=a.retracted||b.retracted;
+  m.source=(SRC_RANK[a.source]||0)>=(SRC_RANK[b.source]||0)?a.source:b.source;
+  m.sources=Array.from(new Set([...(a.sources||[a.source]),...(b.sources||[b.source])].filter(Boolean)));
+  return m;
+}
+function dedup(papers){
+  const byDoi=new Map(),byTitle=new Map(),out=[];
+  papers.forEach(p=>{
+    const q={...p,doi:normDOI(p.doi),sources:p.sources||[p.source],itemType:p.itemType||'article'};
+    const d=q.doi;
+    if(d&&byDoi.has(d)){const i=byDoi.get(d);out[i]=mergeRecords(out[i],q);return;}
+    const t=normTitle(q.title);
+    const tk=t.split(' ').slice(0,12).join(' ');
+    if(tk&&byTitle.has(tk)){
+      const i=byTitle.get(tk);
+      // en humanidades hay muchas obras con títulos casi idénticos (ediciones, series):
+      // solo se fusiona si la similitud global es muy alta Y el año no discrepa
+      const sameYear=!q.year||!out[i].year||Math.abs(parseInt(q.year)-parseInt(out[i].year))<=1;
+      if(jaccard(t,normTitle(out[i].title))>=0.88&&sameYear){
+        out[i]=mergeRecords(out[i],q);
+        if(q.doi&&!byDoi.has(q.doi))byDoi.set(q.doi,i);
+        return;
+      }
+    }
+    out.push(q);const idx=out.length-1;
+    if(d)byDoi.set(d,idx);
+    if(tk&&!byTitle.has(tk))byTitle.set(tk,idx);
+  });
+  return out;
+}
 
-async function searchPM(q,max){const email=document.getElementById('pubmedEmail')?.value||'humanitas@app.io';try{const sp=new URLSearchParams({db:'pubmed',term:`(${q}) AND (English[Language] OR Spanish[Language])`,retmax:max,retmode:'json',tool:'humanitas',email});const pmids=((await(await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${sp}`)).json()).esearchresult?.idlist||[]).slice(0,max);if(!pmids.length)return[];const fp=new URLSearchParams({db:'pubmed',id:pmids.join(','),retmode:'json',tool:'humanitas',email});const res=(await(await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?${fp}`)).json()).result||{};return pmids.map(id=>{const a=res[id]||{};return{title:a.title||'',authors:(a.authors||[]).slice(0,4).map(x=>x.name||''),year:(a.pubdate||'').slice(0,4),journal:a.fulljournalname||a.source||'',abstract:'',citations:0,url:`https://pubmed.ncbi.nlm.nih.gov/${id}/`,doi:(a.articleids||[]).find(x=>x.idtype==='doi')?.value||'',source:'PubMed',oa_status:''};}).filter(p=>p.title);}catch(e){log('⚠ PubMed: '+e.message,'warn');return[];}}
+/* ── 5. Filtro temporal real (antes el deslizador no filtraba nada) ── */
+function getYearRange(){
+  const n=parseInt(document.getElementById('years')?.value)||30;
+  const to=new Date().getFullYear();
+  const soft=!!document.getElementById('tog-yearsoft')?.classList.contains('on');
+  return {from:to-n+1,to,span:n,soft};
+}
+/* En humanidades y derecho la obra de referencia suele ser antigua: una ventana
+   de 20-30 años elimina precisamente el canon. Por eso:
+   · en modo flexible (por defecto) el periodo orienta las consultas pero no descarta nada;
+   · en modo estricto se descarta por año, salvo monografías y capítulos, que se conservan. */
+function filterByYear(papers,yr){
+  if(!yr||yr.soft)return papers;
+  return papers.filter(p=>{
+    const y=parseInt(p.year);
+    if(isNaN(y))return true;
+    if(/book|monograph|chapter/i.test(p.itemType||''))return true;
+    return y>=yr.from&&y<=yr.to;
+  });
+}
 
-function dedup(papers){const seen=new Set();return papers.filter(p=>{const k=p.title.toLowerCase().slice(0,50).replace(/\s+/g,'');if(!k||seen.has(k))return false;seen.add(k);return true;});}
-function sortPapers(papers){const by=document.getElementById('sortPapers')?.value||'citations';if(by==='citations')return papers.sort((a,b)=>(b.citations||0)-(a.citations||0));if(by==='year')return papers.sort((a,b)=>parseInt(b.year||0)-parseInt(a.year||0));return papers.sort((a,b)=>a.source.localeCompare(b.source));}
-function fmt(papers,top=25){return papers.slice(0,top).map((p,i)=>{const a=p.authors.slice(0,3).join(', ')+(p.authors.length>3?' et al.':'');return`[${i+1}] ${p.title}\n    Authors: ${a||'Unknown'} | Year: ${p.year||'?'} | Venue: ${p.journal||'?'} | Citations: ${p.citations}\n    Source: ${p.source} | DOI: ${p.doi||'N/A'}\n    Abstract: ${p.abstract||'(not available)'}\n    URL: ${p.url}`;}).join('\n\n');}
+/* ── 6. Ranking adaptado a humanidades ─────────────
+   El recuento bruto de citas es mal indicador aquí:
+   las monografías y la producción no indexada citan
+   poco en las bases disponibles. Se pondera menos la
+   citación y más el material aprovechable.          */
+function rankPapers(papers){
+  const by=document.getElementById('sortPapers')?.value||'relevance';
+  const now=new Date().getFullYear();
+  papers.forEach(p=>{
+    const y=parseInt(p.year)||now;
+    p.cpy=(p.citations||0)/Math.max(1,now-y+1);
+  });
+  const sorted=[...papers].sort((a,b)=>a.cpy-b.cpy);
+  const n=sorted.length||1;
+  sorted.forEach((p,i)=>{p.cpct=Math.round(100*i/n);});
+  papers.forEach(p=>{
+    const rec=Math.max(0,1-(now-(parseInt(p.year)||now))/40);       // horizonte largo: 40 años
+    const hasAbs=p.abstract&&p.abstract.length>80?1:0;
+    const nsrc=Math.min(3,(p.sources||[p.source]).length)/3;
+    const isBook=/book|monograph|chapter/i.test(p.itemType||'')?1:0;
+    p.score=0.28*(p.cpct/100)+0.18*rec+0.30*hasAbs+0.12*nsrc+0.12*isBook;
+    if(p.retracted)p.score-=1;
+  });
+  if(by==='citations')return papers.sort((a,b)=>(b.citations||0)-(a.citations||0));
+  if(by==='year')return papers.sort((a,b)=>(parseInt(b.year)||0)-(parseInt(a.year)||0));
+  if(by==='source')return papers.sort((a,b)=>String(a.source).localeCompare(String(b.source)));
+  return papers.sort((a,b)=>b.score-a.score);
+}
 
-// ═══════════════════════════════════════════════════
-//  AUTOSAVE DRAFT
-// ═══════════════════════════════════════════════════
-function saveDraft(sections,papers,gaps,meta){
-  try{localStorage.setItem('humanitas_draft',JSON.stringify({sections,papers:papers.slice(0,20),gaps,meta,ts:Date.now(),text:Object.entries(sections).map(([k,v])=>`## ${k}\n\n${v}`).join('\n\n')}));}catch(e){}
+/* ── 7. Retractaciones (OpenAlex, por lotes de 50 DOI) ── */
+async function checkRetractions(papers){
+  const withDoi=papers.filter(p=>p.doi);
+  if(!withDoi.length)return 0;
+  const email=document.getElementById('pubmedEmail')?.value||'';
+  let flagged=0;
+  for(let i=0;i<withDoi.length;i+=50){
+    const batch=withDoi.slice(i,i+50);
+    try{
+      const u=new URLSearchParams({filter:`doi:${batch.map(p=>'https://doi.org/'+p.doi).join('|')}`,select:'doi,is_retracted',per_page:50});
+      if(email)u.set('mailto',email);
+      const r=await fetch(`https://api.openalex.org/works?${u}`);
+      if(!r.ok)continue;
+      const map=new Map(((await r.json()).results||[]).map(w=>[normDOI(w.doi),!!w.is_retracted]));
+      batch.forEach(p=>{if(map.get(p.doi)){p.retracted=true;flagged++;}});
+    }catch(e){}
+  }
+  return flagged;
+}
+
+/* ── 8. CITAS ANCLADAS AL CORPUS ───────────────────
+   El redactor cita [n] contra la lista numerada. La
+   comprobación se hace aquí, en JavaScript: no se le
+   pregunta al modelo si sus citas son correctas.     */
+function citationList(papers){
+  return papers.map((p,i)=>{
+    const a=(p.authors||[]).slice(0,3).join(', ')+((p.authors||[]).length>3?' et al.':'');
+    const tipo=itemTypeLabel(p.itemType);
+    return `[${i+1}] ${p.title}\n    Autoría: ${a||'Desconocida'} | Año: ${p.year||'?'} | ${tipo}: ${p.journal||p.publisher||'?'} | Citas: ${p.citations||0}${p.retracted?' | ⚠ RETRACTADO':''}\n    DOI: ${p.doi||'N/D'} | Fuente: ${(p.sources||[p.source]).join('/')}\n    Resumen: ${(p.abstract||'(no disponible)').slice(0,600)}`;
+  }).join('\n\n');
+}
+function itemTypeLabel(t){
+  if(/book-chapter|chapter/i.test(t||''))return 'Capítulo en';
+  if(/book|monograph/i.test(t||''))return 'Editorial';
+  if(/dissertation|thesis/i.test(t||''))return 'Tesis';
+  if(/report/i.test(t||''))return 'Informe';
+  return 'Publicado en';
+}
+const CITE_RE=/\[(\d+(?:\s*[,;–-]\s*\d+)*)\]/g;
+function extractCites(text){
+  const ids=[];let m;CITE_RE.lastIndex=0;
+  while((m=CITE_RE.exec(text))!==null){
+    m[1].split(/[,;]/).forEach(part=>{
+      const rng=part.split(/[–-]/).map(x=>parseInt(x.trim())).filter(x=>!isNaN(x));
+      if(rng.length===2&&rng[1]>rng[0]&&rng[1]-rng[0]<60){for(let k=rng[0];k<=rng[1];k++)ids.push(k);}
+      else if(rng.length)ids.push(rng[0]);
+    });
+  }
+  return ids;
+}
+function auditSection(text,corpusSize){
+  const ids=extractCites(text);
+  const valid=ids.filter(i=>i>=1&&i<=corpusSize);
+  const invalid=ids.filter(i=>i<1||i>corpusSize);
+  const authorYear=(text.match(/\[[A-ZÁÉÍÓÚÑ][^\]\d]{2,40},?\s*(19|20)\d{2}[a-z]?\]/g)||[]);
+  const words=text.split(/\s+/).filter(Boolean).length;
+  return {ids,valid,invalid,authorYear,words,density:words?valid.length/words*1000:0};
+}
+function stripInvalidCites(text,corpusSize){
+  return text.replace(CITE_RE,(full,inner)=>{
+    const keep=[];
+    inner.split(/[,;]/).forEach(part=>{
+      const rng=part.split(/[–-]/).map(x=>parseInt(x.trim())).filter(x=>!isNaN(x));
+      if(rng.length===2&&rng[1]>rng[0]){for(let k=rng[0];k<=rng[1];k++)if(k>=1&&k<=corpusSize)keep.push(k);}
+      else if(rng.length&&rng[0]>=1&&rng[0]<=corpusSize)keep.push(rng[0]);
+    });
+    return keep.length?'['+Array.from(new Set(keep)).sort((a,b)=>a-b).join(', ')+']':'';
+  }).replace(/\(\s*\)/g,'').replace(/ +([.,;:])/g,'$1').replace(/ {2,}/g,' ');
+}
+const fam=s=>String(s||'').trim().split(/\s+/).pop();
+const ini=s=>{const t=String(s||'').trim().split(/\s+/);return t.length>1?t[0][0]+'.':'';};
+function authorYearLabel(p){
+  const au=p.authors||[];
+  if(!au.length)return `Anónimo, ${p.year||'s.f.'}`;
+  if(au.length===1)return `${fam(au[0])}, ${p.year||'s.f.'}`;
+  if(au.length===2)return `${fam(au[0])} y ${fam(au[1])}, ${p.year||'s.f.'}`;
+  return `${fam(au[0])} et al., ${p.year||'s.f.'}`;
+}
+function authorOnlyLabel(p){   // MLA: autor sin año (la página no la conocemos)
+  const au=p.authors||[];
+  if(!au.length)return 'Anónimo';
+  if(au.length===1)return fam(au[0]);
+  if(au.length===2)return `${fam(au[0])} y ${fam(au[1])}`;
+  return `${fam(au[0])} et al.`;
+}
+/* Estilos: los de humanidades y derecho son autor-fecha o autor-página,
+   no numéricos. Se renderiza el marcador según el estilo elegido.       */
+const AUTHOR_DATE_STYLES=['APA','Harvard','Chicago'];
+const AUTHOR_PAGE_STYLES=['MLA'];
+function formatRef(p,i,style){
+  const au=p.authors||[];
+  const doi=p.doi?`https://doi.org/${p.doi}`:(p.url||'');
+  const oa=p.oa_status?` [OA: ${p.oa_status}]`:'';
+  const ret=p.retracted?' ⚠ RETRACTADA':'';
+  const Y=p.year||'s.f.';
+  const isChapter=/chapter/i.test(p.itemType||'');
+  const isBook=/book|monograph/i.test(p.itemType||'')&&!isChapter;
+  const venue=p.journal||p.publisher||'';
+  const pub=p.publisher||'';
+  const cont=venue?`*${venue}*`:'';
+  const tail=`${doi?' '+doi:''}${oa}${ret}`;
+  const clean=s=>s.replace(/\.\./g,'.').replace(/\s+([.,])/g,'$1').replace(/\s{2,}/g,' ').trim();
+  switch(style){
+    case 'MLA':{
+      // MLA 9: 1 autor "Apellido, Nombre." · 2 autores "A, N, y N A." · 3+ "A, N, et al."
+      const full=a=>String(a||'').trim();
+      let list;
+      if(!au.length)list='Anónimo';
+      else if(au.length===1)list=`${fam(au[0])}, ${full(au[0]).replace(new RegExp(fam(au[0])+'$'),'').trim()}`;
+      else if(au.length===2)list=`${fam(au[0])}, ${full(au[0]).replace(new RegExp(fam(au[0])+'$'),'').trim()}, y ${full(au[1])}`;
+      else list=`${fam(au[0])}, ${full(au[0]).replace(new RegExp(fam(au[0])+'$'),'').trim()}, et al.`;
+      if(isBook)return clean(`${list}. *${p.title}*. ${pub||venue}, ${Y}.${tail}`);
+      if(isChapter)return clean(`${list}. "${p.title}." ${cont}, ${pub?pub+', ':''}${Y}.${tail}`);
+      return clean(`${list}. "${p.title}." ${cont}, ${Y}.${tail}`);}
+    case 'Chicago':{
+      const list=au.slice(0,10).map((a,k)=>k===0?`${fam(a)}, ${ini(a)}`:`${ini(a)} ${fam(a)}`).join(', ');
+      if(isBook)return clean(`${list||'Anónimo'}. ${Y}. *${p.title}*. ${pub||venue}.${tail}`);
+      if(isChapter)return clean(`${list||'Anónimo'}. ${Y}. "${p.title}." En ${cont}${pub?', '+pub:''}.${tail}`);
+      return clean(`${list||'Anónimo'}. ${Y}. "${p.title}." ${cont}.${tail}`);}
+    case 'Harvard':{
+      const list=au.slice(0,10).map(a=>`${fam(a)}, ${ini(a)}`).join(', ');
+      if(isBook)return clean(`${list||'Anónimo'} (${Y}) *${p.title}*. ${pub||venue}.${tail}`);
+      if(isChapter)return clean(`${list||'Anónimo'} (${Y}) '${p.title}', en ${cont}${pub?'. '+pub:''}.${tail}`);
+      return clean(`${list||'Anónimo'} (${Y}) '${p.title}', ${cont}.${tail}`);}
+    case 'APA':case 'APA 7':{
+      const list=au.slice(0,20).map(a=>`${fam(a)}, ${ini(a)}`).join(', ');
+      if(isBook)return clean(`${list||'Anónimo'} (${Y}). *${p.title}*. ${pub||venue}.${tail}`);
+      if(isChapter)return clean(`${list||'Anónimo'} (${Y}). ${p.title}. En ${cont}${pub?'. '+pub:''}.${tail}`);
+      return clean(`${list||'Anónimo'} (${Y}). ${p.title}. ${cont}.${tail}`);}
+    case 'Vancouver':{
+      const list=au.slice(0,6).map(a=>`${fam(a)} ${ini(a).replace('.','')}`).join(', ')+(au.length>6?', et al':'');
+      return clean(`${i}. ${list||'Anónimo'}. ${p.title}. ${venue}. ${Y}.${tail}`);}
+    default:{
+      const list=au.slice(0,6).map(a=>`${ini(a)} ${fam(a)}`).join(', ')+(au.length>6?', et al.':'');
+      return clean(`[${i}] ${list||'Anónimo'}, "${p.title}," ${venue}${venue?', ':''}${Y}.${tail}`);}
+  }
+}
+/* Renumera por orden de aparición y convierte el marcador al estilo pedido.
+   Devuelve las secciones reescritas y solo las referencias citadas.        */
+function finalizeCitations(sections,corpus,style){
+  const order=[];const map=new Map();
+  const scan=t=>extractCites(t).forEach(id=>{if(id>=1&&id<=corpus.length&&!map.has(id)){map.set(id,order.length+1);order.push(id);}});
+  Object.values(sections).forEach(scan);
+  const mode=AUTHOR_DATE_STYLES.includes(style)?'ad':(AUTHOR_PAGE_STYLES.includes(style)?'ap':'num');
+  const out={};
+  Object.entries(sections).forEach(([k,t])=>{
+    out[k]=t.replace(CITE_RE,(full,inner)=>{
+      const keep=[];
+      inner.split(/[,;]/).forEach(part=>{
+        const rng=part.split(/[–-]/).map(x=>parseInt(x.trim())).filter(x=>!isNaN(x));
+        if(rng.length===2&&rng[1]>rng[0]){for(let k2=rng[0];k2<=rng[1];k2++)if(map.has(k2))keep.push(k2);}
+        else if(rng.length&&map.has(rng[0]))keep.push(rng[0]);
+      });
+      if(!keep.length)return '';
+      const uniq=Array.from(new Set(keep));
+      if(mode==='ad')return '('+uniq.map(id=>authorYearLabel(corpus[id-1])).join('; ')+')';
+      if(mode==='ap')return '('+uniq.map(id=>authorOnlyLabel(corpus[id-1])).join('; ')+')';
+      return '['+uniq.map(id=>map.get(id)).sort((a,b)=>a-b).join(', ')+']';
+    }).replace(/\(\s*\)/g,'').replace(/ +([.,;:])/g,'$1').replace(/ {2,}/g,' ');
+  });
+  let refs=order.map((origId,i)=>({paper:corpus[origId-1],n:i+1,orig:origId}));
+  // en estilos autor-fecha la bibliografía va alfabetizada, no por orden de aparición
+  if(mode!=='num')refs.sort((a,b)=>{
+    const ka=(fam((a.paper.authors||[])[0])||'zzz').toLowerCase();
+    const kb=(fam((b.paper.authors||[])[0])||'zzz').toLowerCase();
+    return ka===kb?String(a.paper.year||'').localeCompare(String(b.paper.year||'')):ka.localeCompare(kb);
+  });
+  refs=refs.map((r,i)=>({...r,n:i+1,line:formatRef(r.paper,i+1,style)}));
+  return {sections:out,refs,citedIdx:order,mode};
+}
+
+/* ── 9. Métricas duras ── */
+function computeMetrics(sections,corpus,refs,audits){
+  const text=Object.values(sections).join('\n');
+  const words=text.split(/\s+/).filter(Boolean).length;
+  const totalIds=audits.reduce((a,x)=>a+x.ids.length,0);
+  const invalid=audits.reduce((a,x)=>a+x.invalid.length,0);
+  const legacy=audits.reduce((a,x)=>a+x.authorYear.length,0);
+  const noCite=audits.filter(x=>x.valid.length===0).length;
+  const years=refs.map(r=>parseInt(r.paper.year)).filter(y=>!isNaN(y));
+  const now=new Date().getFullYear();
+  const venues={};refs.forEach(r=>{const v=r.paper.journal||r.paper.publisher||'—';venues[v]=(venues[v]||0)+1;});
+  const tot=refs.length||1;
+  const hhi=Object.values(venues).reduce((a,n)=>a+Math.pow(n/tot,2),0);
+  const books=refs.filter(r=>/book|monograph|chapter/i.test(r.paper.itemType||'')).length;
+  return {
+    words,citations:totalIds,
+    resolved:totalIds?(totalIds-invalid)/totalIds:1,
+    invalid,legacy,
+    density:words?(totalIds-invalid)/words*1000:0,
+    coverage:corpus.length?refs.length/corpus.length:0,
+    sectionsNoCite:noCite,refCount:refs.length,
+    yearMin:years.length?Math.min(...years):null,
+    yearMax:years.length?Math.max(...years):null,
+    span:years.length?Math.max(...years)-Math.min(...years):0,
+    recency:refs.length?years.filter(y=>y>=now-10).length/refs.length:0,
+    venueHHI:hhi,
+    monographs:refs.length?books/refs.length:0,
+    oaRatio:refs.length?refs.filter(r=>r.paper.oa_status&&r.paper.oa_status!=='closed').length/refs.length:0,
+    doiRatio:refs.length?refs.filter(r=>r.paper.doi).length/refs.length:0,
+    retracted:refs.filter(r=>r.paper.retracted).length
+  };
+}
+function metricsHtml(m,refScore){
+  const pct=x=>(x*100).toFixed(0)+'%';
+  const rows=[
+    ['Citas resueltas contra el corpus',pct(m.resolved),m.resolved>=0.99?'ok':'bad',`${m.citations-m.invalid} de ${m.citations} marcadores`],
+    ['Densidad de citas',m.density.toFixed(1)+' /1.000 palabras',m.density>=8?'ok':(m.density>=4?'warn':'bad'),'en revisiones densas suele estar entre 8 y 20'],
+    ['Cobertura del corpus',pct(m.coverage),m.coverage>=0.5?'ok':'warn',`${m.refCount} obras citadas`],
+    ['Secciones sin ninguna cita',String(m.sectionsNoCite),m.sectionsNoCite===0?'ok':'bad','deberían ser 0'],
+    ['Citas no ancladas (autor-año inventado)',String(m.legacy),m.legacy===0?'ok':'bad','eliminadas del texto final'],
+    ['Monografías y capítulos',pct(m.monographs),m.monographs>=0.2?'ok':'warn','una bibliografía solo de artículos es sospechosa en humanidades'],
+    ['Amplitud temporal',m.yearMin?`${m.yearMin}–${m.yearMax} (${m.span} años)`:'—',m.span>=20?'ok':'warn','el canon disciplinar rara vez cabe en una década'],
+    ['Concentración de editoriales/revistas (HHI)',m.venueHHI.toFixed(3),m.venueHHI<0.15?'ok':'warn','<0,15 = bibliografía diversificada'],
+    ['Referencias con DOI',pct(m.doiRatio),'ok','en humanidades es normal que sea baja'],
+    ['Acceso abierto',pct(m.oaRatio),'ok','proporción de referencias en abierto'],
+    ['Referencias retractadas',String(m.retracted),m.retracted===0?'ok':'bad','comprobado en OpenAlex'],
+  ];
+  const col={ok:'var(--teal)',warn:'var(--amber)',bad:'var(--red)'};
+  return `<table class="at" style="width:100%"><thead><tr><th>Métrica</th><th style="width:150px">Valor</th><th>Interpretación</th></tr></thead><tbody>
+  ${rows.map(r=>`<tr><td>${esc(r[0])}</td><td style="color:${col[r[2]]};font-weight:600">${esc(r[1])}</td><td style="color:var(--t3)">${esc(r[3])}</td></tr>`).join('')}
+  <tr><td>Juicio del agente <em>referee</em></td><td style="color:var(--t2)">${esc(refScore||'—')}</td><td style="color:var(--t3)">autoevaluación del modelo, <strong>no calibrada</strong>: no es una medida de calidad</td></tr>
+  </tbody></table>`;
+}
+
+/* ── 10. Flujo de selección con recuentos reales ── */
+function prismaSvg(f){
+  const box=(x,y,w,h,title,lines)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="6" fill="#ffffff" stroke="#9ca3af"/>
+    <text x="${x+12}" y="${y+22}" font-size="12" font-weight="600" fill="#111827">${esc(title)}</text>
+    ${lines.map((l,i)=>`<text x="${x+12}" y="${y+42+i*16}" font-size="11" fill="#4b5563">${esc(l)}</text>`).join('')}`;
+  const arr=(x1,y1,x2,y2)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#9ca3af" stroke-width="1.5" marker-end="url(#ah)"/>`;
+  return `<svg viewBox="0 0 720 470" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:720px;background:#fff;border:1px solid var(--border);border-radius:8px">
+  <defs><marker id="ah" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 z" fill="#9ca3af"/></marker></defs>
+  <text x="16" y="22" font-size="13" font-weight="600" fill="#111827">Flujo de selección de fuentes</text>
+  ${box(40,40,320,80,'Identificación',[`Registros en ${f.nSources} bases: ${f.identified}`,...f.perSource.slice(0,3).map(s=>`  · ${s}`)])}
+  ${box(40,150,320,58,'Cribado',[`Duplicados fusionados: ${f.duplicates}`,`Registros únicos: ${f.unique}`])}
+  ${box(40,238,320,74,'Elegibilidad',[`Excluidos por periodo: ${f.excludedYear}`,`Excluidos por retractación: ${f.excludedRetracted}`,`Elegibles: ${f.eligible}`])}
+  ${box(40,342,320,74,'Inclusión',[`Obras en el corpus de citación: ${f.inContext}`,`Obras efectivamente citadas: ${f.cited}`,`Marcadores de cita en el texto: ${f.markers}`])}
+  ${arr(200,120,200,148)}${arr(200,208,200,236)}${arr(200,312,200,340)}
+  ${box(410,150,270,162,'Estrategia de búsqueda',[`Disciplina: ${f.disc}`,`Tipo: ${String(f.workType).slice(0,30)}`,`Consultas: ${f.queries.length}`,...f.queries.slice(0,3).map(q=>`  · ${String(q).slice(0,32)}`),`Periodo: ${f.period}`])}
+  ${box(410,342,270,74,'Trazabilidad',[`Modelo: ${f.model}`,`Ejecutado: ${f.date}`,`Exportable en humanitas_run.json`])}
+  </svg>`;
+}
+function prismaText(f){
+  return `Se interrogaron ${f.nSources} bases bibliográficas (${f.sources}) mediante ${f.queries.length} consultas derivadas del tema y de la terminología propia de la disciplina. ${f.soft?`El periodo ${f.period} orientó las consultas sin operar como criterio de exclusión, de modo que la bibliografía canónica anterior permanece en el corpus. `:`Se aplicó el periodo ${f.period} como criterio de exclusión, conservando en todo caso las monografías y capítulos de libro. `}`
+  +`La búsqueda recuperó ${f.identified} registros (${f.perSource.join('; ')}). La deduplicación se realizó por DOI normalizado y, subsidiariamente, por similitud de título (índice de Jaccard ≥ 0,88 con coincidencia de año), fusionando ${f.duplicates} duplicados y dejando ${f.unique} registros únicos. `
+  +`Se excluyeron ${f.excludedYear} registros por quedar fuera del periodo y ${f.excludedRetracted} por figurar como retractados. Los registros sin año declarado se conservaron, dado que su ausencia es frecuente en monografías. `
+  +`Los ${f.inContext} registros mejor posicionados según un índice compuesto —que pondera el percentil de citas por año, la recencia sobre un horizonte de cuarenta años, la disponibilidad de resumen, la confirmación en varias bases y la condición de monografía o capítulo— constituyeron el corpus de citación, incorporado al texto como lista numerada. `
+  +`El documento final contiene ${f.markers} marcadores de cita que resuelven contra ${f.cited} obras distintas. La correspondencia entre cada marcador y su referencia se verificó de forma determinista mediante código, no mediante el propio modelo de lenguaje; los marcadores no resolubles se eliminaron automáticamente.`;
+}
+
+/* ── 11. IndexedDB ── */
+const IDB_NAME='humanitas_db',IDB_STORE='kv';
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    const r=indexedDB.open(IDB_NAME,1);
+    r.onupgradeneeded=()=>{if(!r.result.objectStoreNames.contains(IDB_STORE))r.result.createObjectStore(IDB_STORE);};
+    r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);
+  });
+}
+async function idbSet(k,v){try{const db=await idbOpen();return await new Promise((res,rej)=>{const t=db.transaction(IDB_STORE,'readwrite');t.objectStore(IDB_STORE).put(v,k);t.oncomplete=()=>res(true);t.onerror=()=>rej(t.error);});}catch(e){log('⚠ No se pudo guardar en IndexedDB: '+e.message,'warn');return false;}}
+async function idbGet(k){try{const db=await idbOpen();return await new Promise((res,rej)=>{const t=db.transaction(IDB_STORE,'readonly');const q=t.objectStore(IDB_STORE).get(k);q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}catch(e){return undefined;}}
+async function idbDel(k){try{const db=await idbOpen();return await new Promise(res=>{const t=db.transaction(IDB_STORE,'readwrite');t.objectStore(IDB_STORE).delete(k);t.oncomplete=()=>res(true);});}catch(e){return false;}}
+
+/* ── 12. .docx real (OOXML) sin dependencias ── */
+const CRC_TABLE=(()=>{const t=new Uint32Array(256);for(let n=0;n<256;n++){let c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0;}return t;})();
+function crc32(bytes){let c=0xFFFFFFFF;for(let i=0;i<bytes.length;i++)c=CRC_TABLE[(c^bytes[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
+function makeZip(files){
+  const enc=new TextEncoder();const chunks=[];const central=[];let offset=0;
+  const u16=n=>[n&0xFF,(n>>8)&0xFF];
+  const u32=n=>[n&0xFF,(n>>8)&0xFF,(n>>16)&0xFF,(n>>>24)&0xFF];
+  files.forEach(f=>{
+    const nameB=enc.encode(f.name),dataB=enc.encode(f.str),crc=crc32(dataB);
+    const local=[...u32(0x04034b50),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),
+      ...u32(crc),...u32(dataB.length),...u32(dataB.length),...u16(nameB.length),...u16(0)];
+    chunks.push(new Uint8Array(local),nameB,dataB);
+    central.push([...u32(0x02014b50),...u16(20),...u16(20),...u16(0),...u16(0),...u16(0),...u16(0),
+      ...u32(crc),...u32(dataB.length),...u32(dataB.length),...u16(nameB.length),...u16(0),...u16(0),...u16(0),...u16(0),...u32(0),...u32(offset)]);
+    central.push(nameB);
+    offset+=local.length+nameB.length+dataB.length;
+  });
+  const cdStart=offset;let cdSize=0;const cdChunks=[];
+  for(let i=0;i<central.length;i+=2){
+    const head=new Uint8Array(central[i]),nm=central[i+1];
+    cdChunks.push(head,nm);cdSize+=head.length+nm.length;
+  }
+  const end=new Uint8Array([...u32(0x06054b50),...u16(0),...u16(0),...u16(files.length),...u16(files.length),...u32(cdSize),...u32(cdStart),...u16(0)]);
+  return new Blob([...chunks,...cdChunks,end],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'});
+}
+function xmlEsc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function docxParagraph(text,style){
+  const runs=[];
+  const parts=String(text).split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).filter(x=>x!=='');
+  parts.forEach(p=>{
+    let props='',t=p;
+    if(/^\*\*[\s\S]+\*\*$/.test(p)){props='<w:b/>';t=p.slice(2,-2);}
+    else if(/^\*[\s\S]+\*$/.test(p)){props='<w:i/>';t=p.slice(1,-1);}
+    runs.push(`<w:r>${props?`<w:rPr>${props}</w:rPr>`:''}<w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`);
+  });
+  return `<w:p>${style?`<w:pPr><w:pStyle w:val="${style}"/></w:pPr>`:'<w:pPr><w:jc w:val="both"/></w:pPr>'}${runs.join('')}</w:p>`;
+}
+function buildDocx(md,meta){
+  const body=[];
+  md.split('\n').forEach(line=>{
+    const t=line.trim();
+    if(!t)return;
+    if(t.startsWith('|'))return;
+    if(t==='---'){body.push('<w:p/>');return;}
+    if(t.startsWith('### '))body.push(docxParagraph(t.slice(4),'Heading3'));
+    else if(t.startsWith('## '))body.push(docxParagraph(t.slice(3),'Heading2'));
+    else if(t.startsWith('# '))body.push(docxParagraph(t.slice(2),'Title'));
+    else if(t.startsWith('- ')||t.startsWith('* '))body.push(docxParagraph('• '+t.slice(2)));
+    else body.push(docxParagraph(t));
+  });
+  const doc=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>${body.join('')}
+<w:sectPr><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1418" w:right="1701" w:bottom="1418" w:left="1701"/></w:sectPr></w:body></w:document>`;
+  const styles=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Garamond" w:hAnsi="Garamond"/><w:sz w:val="24"/></w:rPr></w:rPrDefault>
+<w:pPrDefault><w:pPr><w:spacing w:after="120" w:line="288" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>
+<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style>
+<w:style w:type="paragraph" w:styleId="Title"><w:name w:val="Title"/><w:pPr><w:jc w:val="center"/><w:spacing w:after="240"/></w:pPr><w:rPr><w:b/><w:sz w:val="36"/><w:color w:val="4A2C2A"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:pPr><w:outlineLvl w:val="1"/><w:spacing w:before="240" w:after="120"/></w:pPr><w:rPr><w:b/><w:sz w:val="28"/><w:color w:val="4A2C2A"/></w:rPr></w:style>
+<w:style w:type="paragraph" w:styleId="Heading3"><w:name w:val="heading 3"/><w:pPr><w:outlineLvl w:val="2"/><w:spacing w:before="180" w:after="100"/></w:pPr><w:rPr><w:b/><w:sz w:val="26"/></w:rPr></w:style>
+</w:styles>`;
+  const ct=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+<Default Extension="xml" ContentType="application/xml"/>
+<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>
+</Types>`;
+  const rels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>
+</Relationships>`;
+  const drels=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+</Relationships>`;
+  const core=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<dc:title>${xmlEsc(meta.topic||'Revisión')}</dc:title><dc:creator>Humanitas</dc:creator><cp:lastModifiedBy>Humanitas</cp:lastModifiedBy>
+<dcterms:created xsi:type="dcterms:W3CDTF">${new Date().toISOString().slice(0,19)}Z</dcterms:created></cp:coreProperties>`;
+  return makeZip([
+    {name:'[Content_Types].xml',str:ct},{name:'_rels/.rels',str:rels},
+    {name:'docProps/core.xml',str:core},{name:'word/_rels/document.xml.rels',str:drels},
+    {name:'word/document.xml',str:doc},{name:'word/styles.xml',str:styles},
+  ]);
+}
+
+/* ── 13. Corpus propio: BibTeX / RIS / DOI ── */
+function parseBibtex(txt){
+  const out=[];
+  txt.split(/@(\w+)\s*\{/).forEach((chunk,i,arr)=>{});
+  const re=/@(\w+)\s*\{([\s\S]*?)(?=\n@\w+\s*\{|$)/g;let m;
+  while((m=re.exec(txt))!==null){
+    const kind=m[1].toLowerCase(),e=m[2];
+    const g=k=>{const mm=e.match(new RegExp(k+'\\s*=\\s*[{"]([\\s\\S]*?)[}"]\\s*,?\\s*\\n','i'));return mm?mm[1].replace(/\s+/g,' ').replace(/[{}]/g,'').trim():'';};
+    const title=g('title');if(!title)continue;
+    out.push({title,authors:g('author').split(/\s+and\s+/).filter(Boolean).slice(0,8),
+      year:(g('year')||'').slice(0,4),journal:g('journal')||g('booktitle'),publisher:g('publisher'),
+      abstract:g('abstract').slice(0,600),citations:0,doi:normDOI(g('doi')),url:g('url'),
+      itemType:/book/.test(kind)?(kind==='inbook'||kind==='incollection'?'book-chapter':'book'):(kind==='phdthesis'?'dissertation':'article'),
+      source:'Importado',oa_status:''});
+  }
+  return out;
+}
+function parseRis(txt){
+  const out=[];let cur=null;
+  const TY={BOOK:'book',CHAP:'book-chapter',THES:'dissertation',RPRT:'report'};
+  txt.split(/\r?\n/).forEach(line=>{
+    const m=line.match(/^([A-Z][A-Z0-9])\s+-\s*(.*)$/);
+    if(!m){if(cur&&line.trim()&&cur._last==='AB')cur.abstract+=' '+line.trim();return;}
+    const [,tag,val]=m;
+    if(tag==='TY'){cur={title:'',authors:[],year:'',journal:'',publisher:'',abstract:'',citations:0,doi:'',url:'',itemType:TY[val.trim()]||'article',source:'Importado',oa_status:''};out.push(cur);}
+    if(!cur)return;cur._last=tag;
+    if(tag==='TI'||tag==='T1')cur.title=val;
+    else if(tag==='AU'||tag==='A1')cur.authors.push(val);
+    else if(tag==='PY'||tag==='Y1')cur.year=(val.match(/\d{4}/)||[''])[0];
+    else if(tag==='JO'||tag==='JF'||tag==='T2')cur.journal=val;
+    else if(tag==='PB')cur.publisher=val;
+    else if(tag==='AB'||tag==='N2')cur.abstract=val;
+    else if(tag==='DO')cur.doi=normDOI(val);
+    else if(tag==='UR')cur.url=val;
+  });
+  return out.filter(p=>p.title).map(p=>{delete p._last;return p;});
+}
+async function resolveDois(list){
+  const email=document.getElementById('pubmedEmail')?.value||'';
+  const out=[];
+  for(let i=0;i<list.length;i+=50){
+    const batch=list.slice(i,i+50);
+    try{
+      const u=new URLSearchParams({filter:`doi:${batch.map(d=>'https://doi.org/'+d).join('|')}`,per_page:50,
+        select:'doi,title,abstract_inverted_index,publication_year,authorships,primary_location,cited_by_count,open_access,is_retracted,type'});
+      if(email)u.set('mailto',email);
+      const r=await fetch(`https://api.openalex.org/works?${u}`);
+      if(!r.ok)continue;
+      ((await r.json()).results||[]).forEach(w=>{
+        let abstract='';
+        if(w.abstract_inverted_index){const pos=[];Object.entries(w.abstract_inverted_index).forEach(([wd,ps])=>ps.forEach(p=>pos.push([p,wd])));abstract=pos.sort((a,b)=>a[0]-b[0]).map(x=>x[1]).join(' ').slice(0,600);}
+        out.push({title:w.title||'',authors:(w.authorships||[]).slice(0,8).map(a=>a.author?.display_name||''),
+          year:String(w.publication_year||''),journal:w.primary_location?.source?.display_name||'',publisher:'',
+          abstract,citations:w.cited_by_count||0,url:w.id||'',doi:normDOI(w.doi),itemType:w.type||'article',
+          source:'Importado',oa_status:w.open_access?.oa_status||'',retracted:!!w.is_retracted});
+      });
+    }catch(e){}
+  }
+  return out;
+}
+let importedCorpus=[];
+async function handleCorpusImport(input){
+  const file=input.files&&input.files[0];if(!file)return;
+  const txt=await file.text();
+  let papers=[];
+  if(/\.ris$/i.test(file.name)||/^TY\s+-/m.test(txt))papers=parseRis(txt);
+  else if(/@\w+\s*\{/.test(txt))papers=parseBibtex(txt);
+  else{
+    const dois=Array.from(new Set((txt.match(/10\.\d{4,9}\/[^\s"'<>,;]+/g)||[]).map(normDOI)));
+    if(dois.length){log(`🔎 Resolviendo ${dois.length} DOI en OpenAlex...`,'info');papers=await resolveDois(dois);}
+  }
+  importedCorpus=dedup([...importedCorpus,...papers]);
+  const el=document.getElementById('importInfo');
+  if(el)el.innerHTML=importedCorpus.length
+    ?`<span style="color:var(--teal)">✅ ${importedCorpus.length} obras propias cargadas</span> · <a href="#" onclick="importedCorpus=[];document.getElementById('importInfo').textContent='Ninguna obra propia cargada.';return false" style="color:var(--red)">quitar</a>`
+    :'<span style="color:var(--amber)">No se reconoció ninguna referencia en el fichero.</span>';
+  log(`📥 Corpus propio: ${papers.length} obras importadas de ${file.name}`,'ok');
+  input.value='';
+}
+
+/* ── 14. Exportaciones ── */
+let lastRefs=[],lastRun=null,lastMetrics=null,lastFlow=null;
+function exportDocx(){
+  if(!generatedText)return;
+  try{
+    const blob=buildDocx(generatedText,{topic:document.getElementById('topic').value});
+    const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`humanitas_${slug()}.docx`;a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+    log('⬇ Word (.docx real, OOXML) descargado.','ok');
+  }catch(e){log('❌ docx: '+e.message+' — usando exportación .doc alternativa.','warn');exportWord();}
+}
+function exportBibtex(){
+  if(!lastRefs.length){log('Aún no hay referencias que exportar.','warn');return;}
+  const bib=lastRefs.map(r=>{
+    const p=r.paper;
+    const key=(fam((p.authors||[])[0])||'anon').toLowerCase().replace(/[^a-z]/g,'')+(p.year||'')+String(r.n);
+    const kind=/book-chapter|chapter/i.test(p.itemType)?'incollection':(/book|monograph/i.test(p.itemType)?'book':'article');
+    return `@${kind}{${key},\n  title     = {${p.title}},\n  author    = {${(p.authors||[]).join(' and ')}},\n  year      = {${p.year||''}},\n  ${kind==='article'?'journal':'booktitle'}   = {${p.journal||''}},${p.publisher?`\n  publisher = {${p.publisher}},`:''}${p.doi?`\n  doi       = {${p.doi}},`:''}${p.url?`\n  url       = {${p.url}},`:''}\n}`;
+  }).join('\n\n');
+  dl(`humanitas_${slug()}.bib`,bib,'text/plain');
+  log('⬇ BibTeX de las obras citadas descargado.','ok');
+}
+function exportRunJson(){
+  if(!lastRun){log('Aún no hay ninguna ejecución que exportar.','warn');return;}
+  dl(`humanitas_run_${slug()}.json`,JSON.stringify(lastRun,null,2),'application/json');
+  log('⬇ Traza de ejecución (reproducibilidad) descargada.','ok');
+}
+function downloadPrisma(){
+  if(!lastFlow)return;
+  dl(`humanitas_flujo_${slug()}.svg`,prismaSvg(lastFlow),'image/svg+xml');
+  log('⬇ Diagrama de flujo descargado.','ok');
+}
+
+/* ── 15. Vista previa en streaming ── */
+function streamTarget(sec){
+  const box=document.getElementById('streamBox');if(!box)return;
+  if(sec){box.style.display='';document.getElementById('streamTitle').textContent='✍️ '+sec;document.getElementById('streamBody').textContent='';}
+  else box.style.display='none';
+}
+function streamAppend(delta){
+  const b=document.getElementById('streamBody');if(!b)return;
+  b.textContent+=delta;b.scrollTop=b.scrollHeight;
+}
+
+/* ── 16. Panel de auditoría ── */
+function renderAuditPanel(f,metrics,sectionAudits){
+  const el=document.getElementById('auditArea');if(!el)return;
+  const block=(title,icon,items,render)=>items.length?`
+    <div class="section-block"><div class="section-header" onclick="toggleSection(this)">
+      <span class="section-title-text">${icon} ${esc(title)} (${items.length})</span><span style="color:var(--t3);font-size:12px">▼</span></div>
+      <div class="section-body" style="font-size:13px;line-height:1.7;color:var(--t2);padding:12px 16px">${items.map(render).join('')}</div></div>`:'';
+  const secRows=(sectionAudits||[]).map(a=>`<tr><td>${esc(a.section)}</td><td style="text-align:right">${a.words}</td><td style="text-align:right;color:${a.valid.length?'var(--teal)':'var(--red)'}">${a.valid.length}</td><td style="text-align:right">${a.density.toFixed(1)}</td><td style="text-align:right;color:${a.invalid.length?'var(--red)':'var(--t3)'}">${a.invalid.length}</td></tr>`).join('');
+  el.innerHTML=`
+    <div class="fi">
+      <div class="sh">📐 Métricas verificables de la revisión</div>
+      ${metrics?metricsHtml(metrics,qualityScore):''}
+      <div class="divider"></div>
+      <div class="sh">📄 Citación por sección</div>
+      <table class="at" style="width:100%"><thead><tr><th>Sección</th><th style="width:90px;text-align:right">Palabras</th><th style="width:80px;text-align:right">Citas</th><th style="width:110px;text-align:right">Dens./1.000</th><th style="width:110px;text-align:right">Descartadas</th></tr></thead><tbody>${secRows}</tbody></table>
+      <div class="divider"></div>
+      <div class="sh">🔍 Hallazgos de los agentes validadores</div>
+      ${block('Afirmaciones sin respaldo documental (skeptic)','⚠️',f.claims||[],x=>`<div style="margin-bottom:12px"><strong style="color:var(--amber)">${esc(x.section)}</strong><div style="white-space:pre-wrap">${esc(x.text)}</div></div>`)}
+      ${block('Encaje entre citas y referencias (verifier)','🔗',f.cites||[],x=>`<div style="margin-bottom:12px"><strong style="color:var(--amber)">${esc(x.section)}</strong><div style="white-space:pre-wrap">${esc(x.text)}</div></div>`)}
+      ${block('Continuidad argumentativa (thread)','📐',f.thread||[],x=>`<div style="margin-bottom:12px"><strong style="color:var(--amber)">${esc(x.section)}</strong><div style="white-space:pre-wrap">${esc(x.note)}</div></div>`)}
+      ${block('Revisión por pares simulada (referee)','🧑‍⚖️',f.referee||[],x=>`<div style="margin-bottom:12px"><strong>${esc(x.section)}</strong>${x.score?` <span style="color:var(--t3)">· ${x.score}/5</span>`:''}<div style="white-space:pre-wrap">${esc(x.text)}</div></div>`)}
+      ${(!(f.claims||[]).length&&!(f.cites||[]).length&&!(f.thread||[]).length)?'<div class="ibox"><span>✅</span><span>Los agentes validadores no han señalado incidencias.</span></div>':''}
+      <div class="divider"></div>
+      <div class="sh">💰 Consumo real por agente</div>
+      <table class="at" style="width:100%"><thead><tr><th>Agente</th><th style="text-align:right">Llamadas</th><th style="text-align:right">Tokens entrada</th><th style="text-align:right">Tokens salida</th><th style="text-align:right">Coste</th></tr></thead><tbody>
+      ${usageTable().map(r=>`<tr><td>${esc(r.agent)}</td><td style="text-align:right">${r.calls}</td><td style="text-align:right">${r.in.toLocaleString()}</td><td style="text-align:right">${r.out.toLocaleString()}</td><td style="text-align:right">$${r.cost.toFixed(4)}</td></tr>`).join('')}
+      <tr style="font-weight:600"><td>TOTAL</td><td style="text-align:right">${RUN.calls}</td><td style="text-align:right">${RUN.inTok.toLocaleString()}</td><td style="text-align:right">${RUN.outTok.toLocaleString()}</td><td style="text-align:right">$${runCost().toFixed(4)}</td></tr>
+      </tbody></table>
+    </div>`;
+  const b=document.getElementById('auditBadge');if(b)b.style.display='';
+}
+
+/* ── 17. Persistencia (IndexedDB) ── */
+async function saveDraft(sections,papers,gaps,meta){
+  await idbSet('draft',{sections,papers:(papers||[]).slice(0,60),gaps,meta,ts:Date.now(),
+    text:Object.entries(sections).map(([k,v])=>`## ${k}\n\n${v}`).join('\n\n')});
+}
+async function loadDraft(){
+  const d=await idbGet('draft');if(!d)return;
+  generatedText=d.text||'';sectionTextsStore=d.sections||{};allPapersStore=d.papers||[];gapsStore=d.gaps||'';
+  renderOutputSections(sectionTextsStore,lastRefs,gapsStore,d.meta||{});
+  document.getElementById('partialBadge').style.display='flex';
+  document.getElementById('exportRow').style.display='flex';
+  showMain('output');
+  document.getElementById('draftBanner')?.remove();
 }
 function showDraftBanner(d){
   const meta=d.meta||{};
-  const banner=document.createElement('div');
-  banner.style.cssText='position:fixed;bottom:20px;right:20px;background:#ffffff;border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.4);border-radius:var(--rl);padding:14px 18px;z-index:500;max-width:320px';
-  banner.innerHTML=`<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">📋 Borrador guardado</div><div style="font-size:12px;color:var(--t2);margin-bottom:10px">${meta.topic||'Revisión anterior'} · ${new Date(d.ts).toLocaleDateString('es')}</div><div style="display:flex;gap:8px"><button class="btn btn-primary" style="font-size:12px;padding:5px 10px" onclick="loadDraft()">Recuperar</button><button class="btn btn-danger" style="font-size:12px;padding:5px 10px" onclick="this.closest('div[style]').remove();localStorage.removeItem('humanitas_draft')">Descartar</button></div>`;
-  document.body.appendChild(banner);
+  const b=document.createElement('div');b.id='draftBanner';
+  b.style.cssText='position:fixed;bottom:20px;right:20px;background:#fff;border:1px solid var(--border);border-radius:10px;padding:14px 18px;z-index:500;max-width:320px;box-shadow:0 8px 24px rgba(0,0,0,.18)';
+  b.innerHTML=`<div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px">📋 Borrador guardado</div><div style="font-size:12px;color:var(--t2);margin-bottom:10px">${esc(meta.topic||'Revisión anterior')} · ${new Date(d.ts).toLocaleDateString('es')}</div><div style="display:flex;gap:8px"><button class="btn btn-primary" style="font-size:12px;padding:5px 10px" onclick="loadDraft()">Recuperar</button><button class="btn btn-danger" style="font-size:12px;padding:5px 10px" onclick="document.getElementById('draftBanner').remove();idbDel('draft')">Descartar</button></div>`;
+  document.body.appendChild(b);
 }
-function loadDraft(){
+async function saveToHistory(topic,wordCount,sections,time){
+  let hist=(await idbGet('history'))||[];
+  hist.unshift({id:Date.now(),topic,wordCount,sections,time,ts:Date.now(),
+    text:generatedText,refs:lastRefs,metrics:lastMetrics,run:lastRun,sectionsData:sectionTextsStore,
+    disc:currentDisc,workType:currentWorkType});
+  await idbSet('history',hist.slice(0,20));
+  await renderHistory();
+}
+async function renderHistory(){
+  const area=document.getElementById('historyList');if(!area)return;
+  const hist=(await idbGet('history'))||[];
+  if(!hist.length){area.innerHTML='<div class="placeholder"><div class="bi">🕓</div><p>Aún no hay revisiones guardadas.</p></div>';return;}
+  area.innerHTML=hist.map((h,i)=>`<div class="hist-card fi">
+      <div class="hist-info">
+        <div class="hist-title">${esc(h.topic||'Sin título')}</div>
+        <div class="hist-meta">${new Date(h.ts).toLocaleDateString('es')} · ${(h.wordCount||0).toLocaleString()} palabras · ${h.sections||0} secciones${h.workType?' · '+esc(h.workType):''}${h.metrics?` · ${h.metrics.refCount} refs · ${(h.metrics.resolved*100).toFixed(0)}% citas resueltas`:''}</div>
+      </div>
+      <div class="hist-actions">
+        <button class="btn-ghost" onclick="loadFromHistory(${i})">📂 Cargar</button>
+        <button class="btn-ghost" onclick="downloadHistory(${i})">⬇ .md</button>
+        <button class="btn-ghost" onclick="downloadHistoryRun(${i})">⬇ .json</button>
+        <button class="btn-ghost" style="color:var(--red)" onclick="deleteHistory(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+async function loadFromHistory(i){
+  const hist=(await idbGet('history'))||[];const h=hist[i];if(!h)return;
+  generatedText=h.text||'';lastRefs=h.refs||[];lastMetrics=h.metrics||null;lastRun=h.run||null;
+  sectionTextsStore=h.sectionsData||{};
+  if(Object.keys(sectionTextsStore).length)renderOutputSections(sectionTextsStore,lastRefs,'',{time:h.time,metrics:lastMetrics});
+  else{const oa=document.getElementById('outputArea');oa.innerHTML='';const pre=document.createElement('div');pre.className='out-area fi';pre.textContent=h.text||'';oa.appendChild(pre);}
+  document.getElementById('exportRow').style.display='flex';
+  showMain('output');
+}
+async function downloadHistory(i){const h=((await idbGet('history'))||[])[i];if(!h)return;dl(`humanitas_${(h.topic||'revision').replace(/\s+/g,'_').slice(0,40)}.md`,h.text||'','text/markdown');}
+async function downloadHistoryRun(i){const h=((await idbGet('history'))||[])[i];if(!h||!h.run){log('Esa entrada no tiene traza de ejecución.','warn');return;}dl(`humanitas_run_${(h.topic||'revision').replace(/\s+/g,'_').slice(0,40)}.json`,JSON.stringify(h.run,null,2),'application/json');}
+async function deleteHistory(i){let hist=(await idbGet('history'))||[];hist.splice(i,1);await idbSet('history',hist);await renderHistory();}
+async function clearHistory(){if(!confirm('¿Borrar todo el historial de revisiones?'))return;await idbSet('history',[]);await renderHistory();}
+async function migrateStorage(){
   try{
-    const d=JSON.parse(localStorage.getItem('humanitas_draft'));
-    if(!d)return;
-    generatedText=d.text||'';
-    sectionTextsStore=d.sections||{};
-    allPapersStore=d.papers||[];
-    gapsStore=d.gaps||'';
-    renderOutputSections(sectionTextsStore,d.papers||[],d.gaps||'',d.meta||{});
-    document.getElementById('partialBadge').style.display='flex';
-    document.getElementById('qualityBar').style.display='flex';
-    document.getElementById('exportRow').style.display='flex';
-    document.getElementById('outputBadge').style.display='';
-    showMain('output');
-    document.querySelector('[style*="position:fixed;bottom"]')?.remove();
+    const old=localStorage.getItem('humanitas_history');
+    if(old){
+      if(!((await idbGet('history'))||[]).length){await idbSet('history',JSON.parse(old));log('📦 Historial migrado a IndexedDB.','ok');}
+      localStorage.removeItem('humanitas_history');
+    }
+    const od=localStorage.getItem('humanitas_draft');
+    if(od&&!(await idbGet('draft'))){await idbSet('draft',JSON.parse(od));localStorage.removeItem('humanitas_draft');}
   }catch(e){}
 }
 
 // ═══════════════════════════════════════════════════
-//  HISTORY
+//  SEARCH ENGINES
 // ═══════════════════════════════════════════════════
-function saveToHistory(topic,wordCount,sections,time){
-  try{let hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');hist.unshift({id:Date.now(),topic,wordCount,sections,time,ts:Date.now(),text:generatedText});hist=hist.slice(0,5);localStorage.setItem('humanitas_history',JSON.stringify(hist));}catch(e){}
-  renderHistory();
-}
-function renderHistory(){
-  const area=document.getElementById('historyList');if(!area)return;
+async function searchSS(q,max,yr){
+  const p=new URLSearchParams({query:q,limit:Math.min(max,100),offset:0,fields:'paperId,title,abstract,year,authors,venue,citationCount,url,externalIds,publicationTypes'});
+  if(yr)p.set('year',`${yr.from}-${yr.to}`);
+  const userKey=(document.getElementById('ssKey')?.value||'').trim();
+  const headers=userKey?{'x-api-key':userKey}:{};
   try{
-    const hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');
-    if(!hist.length){area.innerHTML='<div class="placeholder"><div class="bi">🕓</div><p>Aún no hay revisiones guardadas.</p></div>';return;}
-    area.innerHTML=hist.map((h,i)=>`<div class="hist-card fi"><div class="hist-info"><div class="hist-title">${h.topic||'Sin título'}</div><div class="hist-meta">${new Date(h.ts).toLocaleDateString('es')} · ${(h.wordCount||0).toLocaleString()} palabras · ${h.sections||0} secciones · ${h.time||'?'}</div></div><div class="hist-actions"><button class="btn-ghost" onclick="loadFromHistory(${i})">📂 Cargar</button><button class="btn-ghost" onclick="downloadHistory(${i})">⬇</button><button class="btn-ghost" style="color:var(--red)" onclick="deleteHistory(${i})">🗑</button></div></div>`).join('');
-  }catch(e){area.innerHTML='<div class="placeholder"><div class="bi">🕓</div><p>Error cargando historial.</p></div>';}
+    const r=await fetch(`https://api.semanticscholar.org/graph/v1/paper/search?${p}`,{headers});
+    if(r.status===429){log('⚠ Semantic Scholar: límite de peticiones. Puedes añadir tu clave propia en Fuentes.','warn');return[];}
+    if(!r.ok)throw new Error('SS '+r.status);
+    return((await r.json()).data||[]).map(x=>({title:x.title||'',authors:(x.authors||[]).slice(0,8).map(a=>a.name),
+      year:String(x.year||''),journal:x.venue||'',abstract:(x.abstract||'').slice(0,900),citations:x.citationCount||0,
+      url:x.url||'',doi:normDOI((x.externalIds||{}).DOI||''),
+      itemType:(x.publicationTypes||[]).some(t=>/Book/i.test(t))?'book':'article',
+      source:'Semantic Scholar',oa_status:''}));
+  }catch(e){log('⚠ Semantic Scholar: '+e.message,'warn');return[];}
 }
-function loadFromHistory(i){try{const hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');const h=hist[i];if(!h)return;generatedText=h.text||'';showMain('output');document.getElementById('outputArea').innerHTML='';const pre=document.createElement('div');pre.className='out-area fi';pre.textContent=h.text||'';document.getElementById('outputArea').appendChild(pre);document.getElementById('exportRow').style.display='flex';}catch(e){}}
-function downloadHistory(i){try{const hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');const h=hist[i];if(!h)return;generatedText=h.text||'';exportMarkdown();}catch(e){}}
-function deleteHistory(i){try{let hist=JSON.parse(localStorage.getItem('humanitas_history')||'[]');hist.splice(i,1);localStorage.setItem('humanitas_history',JSON.stringify(hist));renderHistory();}catch(e){}}
-function clearHistory(){localStorage.removeItem('humanitas_history');renderHistory();}
+
+async function searchOA(q,max,yr){
+  const email=document.getElementById('pubmedEmail')?.value||'';
+  try{
+    const p=new URLSearchParams({search:q,per_page:Math.min(max,200),page:1,
+      select:'id,title,abstract_inverted_index,publication_year,authorships,primary_location,cited_by_count,doi,open_access,type,is_retracted'});
+    if(email)p.set('mailto',email);
+    if(yr)p.set('filter',`publication_year:${yr.from}-${yr.to}`);
+    const r=await fetch(`https://api.openalex.org/works?${p}`);
+    if(!r.ok)throw new Error('OA '+r.status);
+    return((await r.json()).results||[]).map(w=>{
+      let abstract='';
+      try{if(w.abstract_inverted_index){const pos=[];Object.entries(w.abstract_inverted_index).forEach(([word,positions])=>positions.forEach(x=>pos.push([x,word])));abstract=pos.sort((a,b)=>a[0]-b[0]).map(x=>x[1]).join(' ').slice(0,900);}}catch(e){}
+      const loc=w.primary_location||{};
+      return{title:w.title||'',authors:(w.authorships||[]).slice(0,8).map(a=>a.author?.display_name||''),
+        year:String(w.publication_year||''),journal:loc.source?.display_name||'',publisher:loc.source?.host_organization_name||'',
+        abstract,citations:w.cited_by_count||0,url:w.id||'',doi:normDOI(w.doi),itemType:w.type||'article',
+        source:'OpenAlex',oa_status:w.open_access?.oa_status||'',retracted:!!w.is_retracted};
+    }).filter(p=>p.title);
+  }catch(e){log('⚠ OpenAlex: '+e.message,'warn');return[];}
+}
+
+async function searchCR(q,max,yr){
+  const email=document.getElementById('pubmedEmail')?.value||'';
+  try{
+    const p=new URLSearchParams({query:q,rows:Math.min(max,100),
+      select:'DOI,title,author,published,container-title,abstract,is-referenced-by-count,URL,type,publisher'});
+    if(email)p.set('mailto',email);
+    if(yr)p.set('filter',`from-pub-date:${yr.from}-01-01,until-pub-date:${yr.to}-12-31`);
+    const r=await fetch(`https://api.crossref.org/works?${p}`);
+    if(!r.ok)throw new Error('CR '+r.status);
+    return(((await r.json()).message||{}).items||[]).map(w=>{
+      const year=w.published?.['date-parts']?.[0]?.[0]||'';
+      const doi=normDOI(w.DOI||'');
+      const t=w.type||'journal-article';
+      return{title:(Array.isArray(w.title)?w.title[0]:w.title)||'',
+        authors:(w.author||[]).slice(0,8).map(a=>`${(a.given||'')} ${(a.family||'')}`.trim()),
+        year:String(year),journal:(Array.isArray(w['container-title'])?w['container-title'][0]:w['container-title'])||'',
+        publisher:w.publisher||'',abstract:(w.abstract||'').replace(/<[^>]+>/g,'').slice(0,900),
+        citations:w['is-referenced-by-count']||0,url:doi?`https://doi.org/${doi}`:(w.URL||''),doi,
+        itemType:/book-chapter|chapter/.test(t)?'book-chapter':(/book|monograph/.test(t)?'book':(/dissertation/.test(t)?'dissertation':'article')),
+        source:'CrossRef',oa_status:''};
+    }).filter(p=>p.title);
+  }catch(e){log('⚠ CrossRef: '+e.message,'warn');return[];}
+}
+
+async function searchAX(q,max,yr){
+  let qs=`all:${encodeURIComponent(q.replace(/\s+/g,'+'))}`;
+  if(yr)qs+=`+AND+submittedDate:[${yr.from}01010000+TO+${yr.to}12312359]`;
+  const arxivUrl=`https://export.arxiv.org/api/query?search_query=${qs}&start=0&max_results=${max}`;
+  const candidates=[arxivUrl,
+    `https://corsproxy.io/?url=${encodeURIComponent(arxivUrl)}`,
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(arxivUrl)}`];
+  for(const u of candidates){
+    try{
+      const r=await fetch(u);if(!r.ok)continue;
+      const xml=new DOMParser().parseFromString(await r.text(),'application/xml');
+      const entries=Array.from(xml.querySelectorAll('entry'));
+      if(!entries.length)continue;
+      return entries.map(e=>({title:(e.querySelector('title')?.textContent||'').replace(/\s+/g,' ').trim(),
+        authors:Array.from(e.querySelectorAll('author name')).slice(0,8).map(a=>a.textContent),
+        year:(e.querySelector('published')?.textContent||'').slice(0,4),journal:'arXiv (preprint)',
+        abstract:(e.querySelector('summary')?.textContent||'').replace(/\s+/g,' ').slice(0,900),
+        citations:0,url:e.querySelector('id')?.textContent||'',
+        doi:normDOI(e.querySelector("link[title='doi']")?.getAttribute('href')||''),
+        itemType:'article',source:'arXiv',oa_status:'gold'})).filter(p=>p.title);
+    }catch(e){}
+  }
+  log('⚠ arXiv: no accesible por CORS en este momento.','warn');
+  return[];
+}
+
+async function searchEPMC(q,max,yr){
+  try{
+    const query=yr?`(${q}) AND (FIRST_PDATE:[${yr.from}-01-01 TO ${yr.to}-12-31])`:q;
+    const p=new URLSearchParams({query,format:'json',pageSize:Math.min(max,100),resultType:'core',sort:'CITED desc'});
+    const r=await fetch(`https://www.ebi.ac.uk/europepmc/webservices/rest/search?${p}`);
+    if(!r.ok)throw new Error('EPMC '+r.status);
+    return(((await r.json()).resultList||{}).result||[]).map(a=>({title:a.title||'',
+      authors:(a.authorString||'').split(',').slice(0,8).map(s=>s.trim()),year:String(a.pubYear||''),
+      journal:a.journalTitle||'',abstract:(a.abstractText||'').slice(0,900),citations:a.citedByCount||0,
+      url:a.pmid?`https://europepmc.org/article/MED/${a.pmid}`:(a.doi?`https://doi.org/${a.doi}`:''),
+      doi:normDOI(a.doi),itemType:'article',source:'Europe PMC',oa_status:a.inEPMC==='Y'?'open':''})).filter(p=>p.title);
+  }catch(e){log('⚠ EuropePMC: '+e.message,'warn');return[];}
+}
+
+async function searchPM(q,max,yr){
+  const email=(document.getElementById('pubmedEmail')?.value||'').trim();
+  try{
+    let term=`(${q}) AND (English[Language] OR Spanish[Language])`;
+    if(yr)term+=` AND (${yr.from}[PDAT]:${yr.to}[PDAT])`;
+    const sp=new URLSearchParams({db:'pubmed',term,retmax:max,retmode:'json',tool:'humanitas'});
+    if(email)sp.set('email',email);
+    const pmids=((await(await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?${sp}`)).json()).esearchresult?.idlist||[]).slice(0,max);
+    if(!pmids.length)return[];
+    const fp=new URLSearchParams({db:'pubmed',id:pmids.join(','),retmode:'xml',rettype:'abstract',tool:'humanitas'});
+    if(email)fp.set('email',email);
+    const xmlTxt=await(await fetch(`https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?${fp}`)).text();
+    const xml=new DOMParser().parseFromString(xmlTxt,'application/xml');
+    return Array.from(xml.querySelectorAll('PubmedArticle')).map(a=>{
+      const pmid=a.querySelector('PMID')?.textContent||'';
+      const title=(a.querySelector('ArticleTitle')?.textContent||'').replace(/\s+/g,' ').trim();
+      const abstract=Array.from(a.querySelectorAll('Abstract > AbstractText')).map(n=>{
+        const lab=n.getAttribute('Label');return (lab?lab+': ':'')+n.textContent;}).join(' ').replace(/\s+/g,' ').slice(0,1200);
+      const authors=Array.from(a.querySelectorAll('AuthorList > Author')).slice(0,8).map(au=>{
+        const ln=au.querySelector('LastName')?.textContent||'';const fn=au.querySelector('ForeName')?.textContent||'';
+        return (fn?fn+' ':'')+ln;}).filter(Boolean);
+      const year=a.querySelector('PubDate > Year')?.textContent
+        ||(a.querySelector('PubDate > MedlineDate')?.textContent||'').slice(0,4)
+        ||(a.querySelector('ArticleDate > Year')?.textContent||'');
+      const journal=a.querySelector('Journal > Title')?.textContent||a.querySelector('MedlineTA')?.textContent||'';
+      const doi=Array.from(a.querySelectorAll('ArticleId')).find(n=>n.getAttribute('IdType')==='doi')?.textContent||'';
+      const retracted=Array.from(a.querySelectorAll('PublicationType')).some(n=>/Retracted Publication/i.test(n.textContent));
+      return{title,authors,year:String(year||''),journal,abstract,citations:0,
+        url:`https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,doi:normDOI(doi),itemType:'article',
+        source:'PubMed',oa_status:'',retracted};
+    }).filter(p=>p.title);
+  }catch(e){log('⚠ PubMed: '+e.message,'warn');return[];}
+}
+
+// dedup(), rankPapers() y citationList() viven en el módulo v2
+
+function fmt(papers,top=25){return citationList(papers.slice(0,top));}
+
+// Persistencia antigua en localStorage retirada: ahora IndexedDB (módulo v2).
 
 // ═══════════════════════════════════════════════════
 //  RENDER OUTPUT
 // ═══════════════════════════════════════════════════
-function renderOutputSections(sections,papers,gaps,meta){
+function renderOutputSections(sections,refs,gaps,meta,filteredOut){
+  refs=refs||[];filteredOut=filteredOut||[];meta=meta||{};
   const oa=document.getElementById('outputArea');oa.innerHTML='';
   const container=document.createElement('div');container.className='fi';
-  const words=Object.values(sections).join(' ').split(/\s+/).length;
-  ['sPapers','sWords','sSecs','sTime','sScore'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.textContent=[papers.length,words.toLocaleString(),Object.keys(sections).length,meta.time||'—',meta.score||'N/A'][i];});
+  const m=meta.metrics;
+  const words=Object.values(sections).join(' ').split(/\s+/).filter(Boolean).length;
+  const resolved=m?(m.resolved*100).toFixed(0)+'%':'—';
+  [['sPapers',refs.length],['sWords',words.toLocaleString()],['sSecs',Object.keys(sections).length],['sTime',meta.time||'—'],['sScore',resolved]]
+    .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});
+  const lbl=document.getElementById('sScoreLabel');if(lbl)lbl.textContent='Citas resueltas';
+  const lbl2=document.getElementById('sPapersLabel');if(lbl2)lbl2.textContent='Obras citadas';
   document.getElementById('statsRow').style.display='grid';
-  ['qbPapers','qbSecs','qbTime','qbScore'].forEach((id,i)=>{const el=document.getElementById(id);if(el)el.textContent=[papers.length,Object.keys(sections).length,meta.time||'—',meta.score||'N/A'][i];});
+  [['qbScore',resolved],['qbPapers',refs.length],['qbSecs',Object.keys(sections).length],['qbTime',meta.time||'—']]
+    .forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v;});
   document.getElementById('qualityBar').style.display='flex';
+
+  if(m){
+    const bad=m.resolved<0.999||m.sectionsNoCite>0||m.retracted>0;
+    const w=document.createElement('div');w.className='ibox';
+    w.style.cssText=(bad?'border-color:rgba(220,38,38,.4);background:rgba(220,38,38,.06);':'border-color:rgba(13,148,136,.4);background:rgba(13,148,136,.06);')+'margin-bottom:14px';
+    w.innerHTML=bad
+      ?`<span>⚠️</span><span><strong>Revisa las citas antes de usar este texto.</strong> ${m.invalid} marcadores fuera de rango eliminados · ${m.sectionsNoCite} secciones sin citas · ${m.retracted} obras retractadas. Detalle en la pestaña <strong>Auditoría</strong>.</span>`
+      :`<span>✅</span><span><strong>Los ${m.citations} marcadores de cita resuelven contra el corpus real</strong> (${m.refCount} obras, ${(m.monographs*100).toFixed(0)}% monografías o capítulos). Verificación determinista, no delegada al modelo. Detalle en <strong>Auditoría</strong>.</span>`;
+    container.appendChild(w);
+  }
+
   Object.entries(sections).forEach(([title,content])=>{
-    const block=document.createElement('div');block.className='section-block';
-    block.innerHTML=`<div class="section-header" onclick="toggleSection(this)"><span class="section-title-text">📄 ${title}</span><div class="section-actions" onclick="event.stopPropagation()"><button class="btn-ghost" onclick="openRegenPanel(this)" title="Reescribir sección">🔄 Reescribir</button><span style="font-size:12px;color:var(--t3)">${content.split(/\s+/).length} palabras</span><span style="color:var(--t3);font-size:12px">▼</span></div></div><div class="section-body"><textarea oninput="updateSectionText('${title}',this.value)">${content}</textarea><div class="regen-panel" id="rp-${title.replace(/\s+/g,'_')}"><div style="font-size:12px;color:var(--amber);margin-bottom:6px">🔄 Reescribir "${title}"</div><textarea placeholder="Feedback opcional: hazla más crítica, añade jurisprudencia española, enfoca en el debate doctrinal..."></textarea><div style="display:flex;gap:8px;margin-top:8px"><button class="btn btn-amber" style="font-size:12px;padding:5px 12px" onclick="regenSection('${title}',this)">Regenerar</button><button class="btn-ghost" onclick="this.closest('.regen-panel').classList.remove('open')">Cancelar</button></div></div></div>`;
+    const safeId=title.replace(/\s+/g,'_').replace(/[^a-zA-Z0-9_]/g,'');
+    const nCites=extractCites(content).length;
+    const block=document.createElement('div');block.className='section-block';block.dataset.title=title;
+    block.innerHTML=`<div class="section-header" onclick="toggleSection(this)">
+        <span class="section-title-text">📄 ${esc(title)}</span>
+        <div class="section-actions" onclick="event.stopPropagation()">
+          <button class="btn-ghost" onclick="openRegenPanel(this)" title="Reescribir sección">🔄 Reescribir</button>
+          <span style="font-size:12px;color:var(--t3)">${content.split(/\s+/).filter(Boolean).length} palabras · ${nCites} citas</span>
+          <span style="color:var(--t3);font-size:12px">▼</span>
+        </div></div>
+      <div class="section-body">
+        <textarea id="edit-${safeId}" oninput="updateSectionText('${safeId}',this.value)">${esc(content)}</textarea>
+        <div class="regen-panel" id="rp-${safeId}">
+          <div style="font-size:12px;color:var(--amber);margin-bottom:6px">🔄 Reescribir "${esc(title)}"</div>
+          <textarea placeholder="Feedback opcional: hazla más crítica, añade jurisprudencia española, enfoca en el debate doctrinal..."></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-amber" style="font-size:12px;padding:5px 12px" onclick="regenSection('${safeId}',this)">Regenerar</button>
+            <button class="btn-ghost" onclick="this.closest('.regen-panel').classList.remove('open')">Cancelar</button>
+          </div>
+        </div>
+      </div>`;
     container.appendChild(block);
   });
-  if(papers.length){
-    const refBlock=document.createElement('div');refBlock.className='section-block';
-    refBlock.innerHTML=`<div class="section-header"><span class="section-title-text">📚 Referencias (${papers.length})</span><span style="font-size:12px;color:var(--t3)">▼</span></div><div class="section-body" style="padding:12px 16px;font-size:12px;color:var(--t2);line-height:1.8">${papers.slice(0,40).map((p,i)=>{const a=p.authors.slice(0,3).join(', ')+(p.authors.length>3?' et al.':'');return`[${i+1}] ${a||'Unknown'}. "${p.title}". ${p.journal||''}${p.year?', '+p.year:''}. ${p.doi?'<a href="https://doi.org/'+p.doi+'" target="_blank" style="color:var(--accent)">DOI</a>':''} ${p.oa_status?'<span style="color:var(--teal);font-size:10px">✅ '+p.oa_status+'</span>':''}<br>`;}).join('')}</div>`;
-    container.appendChild(refBlock);
+
+  if(meta.flow&&meta.doPrisma){
+    const pb=document.createElement('div');pb.className='section-block';
+    pb.innerHTML=`<div class="section-header" onclick="toggleSection(this)"><span class="section-title-text">🔬 Flujo de selección de fuentes</span><span style="color:var(--t3);font-size:12px">▼</span></div>
+      <div class="section-body" style="overflow-x:auto">${prismaSvg(meta.flow)}<div style="margin-top:8px"><button class="btn-ghost" onclick="downloadPrisma()">⬇ Descargar SVG</button></div></div>`;
+    container.appendChild(pb);
   }
+
+  if(refs.length){
+    const rb=document.createElement('div');rb.className='section-block';
+    rb.innerHTML=`<div class="section-header" onclick="toggleSection(this)"><span class="section-title-text">📚 Referencias citadas (${refs.length})</span><span style="font-size:12px;color:var(--t3)">▼</span></div>
+      <div class="section-body" style="padding:12px 16px;font-size:12px;color:var(--t2);line-height:1.9">
+      ${refs.map(r=>`<div style="margin-bottom:6px">${esc(r.line)} ${r.paper.doi?`<a href="https://doi.org/${encodeURIComponent(r.paper.doi)}" target="_blank" rel="noopener" style="color:var(--accent)">↗ DOI</a>`:''}${/book|chapter/i.test(r.paper.itemType||'')?' <span title="monografía o capítulo">📕</span>':''}${r.paper.retracted?' <span style="color:var(--red);font-weight:600">⚠ RETRACTADA</span>':''}</div>`).join('')}
+      ${filteredOut.length?`<div style="margin-top:12px;padding-top:10px;border-top:1px solid var(--border);color:var(--t3)"><strong style="color:var(--amber)">⏱ ${filteredOut.length} obras excluidas por periodo</strong></div>`:''}
+      </div>`;
+    container.appendChild(rb);
+  }
+
   if(gaps){
-    const gapBlock=document.createElement('div');gapBlock.className='section-block';
-    gapBlock.innerHTML=`<div class="section-header"><span class="section-title-text">🔍 Lagunas Doctrinales</span><span style="font-size:12px;color:var(--t3)">▼</span></div><div class="section-body"><div style="white-space:pre-wrap;font-size:13px;color:var(--t2);line-height:1.7">${gaps}</div></div>`;
-    container.appendChild(gapBlock);
+    const gb=document.createElement('div');gb.className='section-block';
+    gb.innerHTML=`<div class="section-header" onclick="toggleSection(this)"><span class="section-title-text">🔍 Lagunas doctrinales</span><span style="font-size:12px;color:var(--t3)">▼</span></div><div class="section-body"><div style="white-space:pre-wrap;font-size:13px;color:var(--t2);line-height:1.7;padding:12px 16px">${esc(gaps)}</div></div>`;
+    container.appendChild(gb);
   }
+
   oa.appendChild(container);
   document.getElementById('outputBadge').style.display='';
 }
 
 function toggleSection(header){const body=header.nextElementSibling;body.style.display=body.style.display==='none'?'':'none';}
-function updateSectionText(title,val){sectionTextsStore[title]=val;rebuildFullText();}
+function titleFromSafeId(safeId){
+  const el=document.getElementById('edit-'+safeId)?.closest('.section-block');
+  return el?.dataset.title||safeId;
+}
+function updateSectionText(safeId,val){sectionTextsStore[titleFromSafeId(safeId)]=val;rebuildFullText();}
 function rebuildFullText(){generatedText=Object.entries(sectionTextsStore).map(([k,v])=>`## ${k}\n\n${v}`).join('\n\n');}
 function openRegenPanel(btn){const rp=btn.closest('.section-body')?.querySelector('.regen-panel');if(rp)rp.classList.toggle('open');}
 
-async function regenSection(title,btn){
+async function regenSection(safeId,btn){
+  const title=titleFromSafeId(safeId);
   const apiKey=document.getElementById('apiKey').value.trim();
   if(!apiKey){alert('Introduce tu API key primero.');return;}
-  const rpanel=btn.closest('.regen-panel');
-  const feedback=rpanel.querySelector('textarea').value.trim();
-  const orig=btn.textContent;
-  btn.textContent='⏳...';btn.disabled=true;
-  const discCtx=DISCIPLINE_PROMPTS[currentDisc]||DISCIPLINE_PROMPTS.social;
+  const rp=btn.closest('.regen-panel');
+  const feedback=rp.querySelector('textarea').value.trim();
+  const orig=btn.textContent;btn.textContent='⏳...';btn.disabled=true;
   try{
     const lang=document.getElementById('lang').value;
-    const newContent=await callAI(apiKey,[
-      {role:'system',content:`You are an Academic Section Writer specializing in ${discCtx.scoutContext}. Write in ${lang}. ${discCtx.crafterContext}`},
-      {role:'user',content:`Rewrite the "${title}" section.\n${feedback?'User feedback: '+feedback+'\n':''}\nBase on:\n${fmt(allPapersStore,15)}\n\nWrite ~${Math.max(400,Math.floor(parseInt(document.getElementById('wc').value)/Object.keys(sectionTextsStore).length))} words. Academic tone. Cite as [Author, Year] in ${document.getElementById('citeStyle').value} style.`}
-    ],getTokens('crafter'),0.7);
-    sectionTextsStore[title]=newContent;
-    document.querySelectorAll('.section-header').forEach(h=>{if(h.querySelector('.section-title-text')?.textContent.includes(title)){const ta=h.nextElementSibling?.querySelector('textarea');if(ta)ta.value=newContent;}});
+    const discCtx=DISCIPLINE_PROMPTS[currentDisc]||DISCIPLINE_PROMPTS.social;
+    const topP=parseInt(document.getElementById('topPapers').value)||25;
+    const corpus=allPapersStore.slice(0,topP);
+    const target=Math.max(400,Math.floor(parseInt(document.getElementById('wc').value)/Math.max(1,Object.keys(sectionTextsStore).length)));
+    let txt=await callAI(apiKey,[
+      {role:'system',content:`Eres redactor de secciones académicas en ${discCtx.scoutContext}. Escribe en ${lang}. ${discCtx.crafterContext} Cita exclusivamente con índices [n] del corpus, 1 ≤ n ≤ ${corpus.length}.`},
+      {role:'user',content:`Reescribe la sección "${title}" de un trabajo del tipo "${currentWorkType}".\n${feedback?'Indicaciones: '+feedback+'\n':''}\nCORPUS NUMERADO:\n${citationList(corpus)}\n\nExtensión ~${target} palabras. Cada párrafo con al menos una cita [n].`}
+    ],getTokens('crafter'),0.6,null,'crafter');
+    txt=stripInvalidCites(txt,corpus.length);
+    sectionTextsStore[title]=txt;
+    const ta=document.getElementById('edit-'+safeId);if(ta)ta.value=txt;
     rebuildFullText();
-    rpanel.classList.remove('open');
-    log(`✅ Sección "${title}" regenerada.`,'ok');
+    rp.classList.remove('open');
+    const a=auditSection(txt,corpus.length);
+    log(`✅ Sección "${title}" regenerada · ${a.valid.length} citas válidas.`,'ok');
   }catch(e){log('❌ Regenerar: '+e.message,'err');}
   finally{btn.textContent=orig;btn.disabled=false;}
 }
 
 // ═══════════════════════════════════════════════════
-//  MAIN PIPELINE
+//  CHECKPOINT DE FUENTES (no existía en la v1)
 // ═══════════════════════════════════════════════════
+function checkpointPapers(papers,topic,yr){
+  return new Promise(resolve=>{
+    if(!document.getElementById('tog-checkpoint')?.classList.contains('on')){resolve(true);return;}
+    const withAbstract=papers.filter(p=>p.abstract&&p.abstract.length>80).length;
+    const books=papers.filter(p=>/book|monograph|chapter/i.test(p.itemType||'')).length;
+    const srcCount={};papers.forEach(p=>(p.sources||[p.source]).forEach(s=>srcCount[s]=(srcCount[s]||0)+1));
+    const srcBreakdown=Object.entries(srcCount).map(([s,n])=>`${s}: ${n}`).join(' · ');
+    const topN=Math.min(papers.length,parseInt(document.getElementById('topPapers').value)||25);
+    const ov=document.createElement('div');
+    ov.id='cpOverlay';
+    ov.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:900;display:flex;align-items:center;justify-content:center;padding:20px';
+    ov.innerHTML=`<div style="background:#fff;border-radius:12px;max-width:900px;width:100%;max-height:88vh;overflow-y:auto;padding:22px">
+      <h3 style="margin:0 0 4px;font-size:18px;color:var(--text)">📚 Fuentes recuperadas</h3>
+      <div style="font-size:13px;color:var(--t2);margin-bottom:14px">${esc(topic)} · ${yr.from}–${yr.to}</div>
+      <div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px;font-size:12px">
+        <div class="cp-stat"><strong>${papers.length}</strong> obras únicas</div>
+        <div class="cp-stat"><strong>${withAbstract}</strong> con resumen</div>
+        <div class="cp-stat"><strong>${books}</strong> monografías/capítulos</div>
+        <div class="cp-stat"><strong>${papers.filter(p=>p.doi).length}</strong> con DOI</div>
+        <div class="cp-stat" style="flex:1;min-width:220px"><strong style="font-weight:400">${esc(srcBreakdown)}</strong></div>
+      </div>
+      ${papers.length<10?'<div class="ibox" style="border-color:rgba(220,38,38,.4);margin-bottom:10px"><span>⚠️</span><span>Muy pocas fuentes: el texto resultante será superficial. Amplía el periodo o añade bases.</span></div>':''}
+      ${withAbstract/(papers.length||1)<0.5?'<div class="ibox" style="border-color:rgba(217,119,6,.4);margin-bottom:10px"><span>⚠️</span><span>Menos de la mitad tienen resumen. El redactor tendrá poco material real que citar: considera importar tu propia bibliografía.</span></div>':''}
+      ${books===0?'<div class="ibox" style="border-color:rgba(217,119,6,.4);margin-bottom:10px"><span>📕</span><span>No se ha recuperado ninguna monografía ni capítulo. En humanidades y derecho eso suele indicar que falta la bibliografía nuclear: impórtala en BibTeX o RIS desde el panel Fuentes.</span></div>':''}
+      <div style="border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:14px">
+      <table class="at" style="width:100%;font-size:12px"><thead><tr><th>Obra</th><th style="width:150px">Autoría</th><th style="width:60px">Año</th><th style="width:60px;text-align:right">Citas</th><th style="width:110px">Fuente</th></tr></thead><tbody>
+      ${papers.slice(0,30).map((p,i)=>{
+        const a=(p.authors||[]).slice(0,2).join(', ')+((p.authors||[]).length>2?' et al.':'');
+        const srcs=(p.sources||[p.source]).map(s=>String(s).replace('Semantic Scholar','SS').replace('Europe PMC','EPMC').replace('OpenAlex','OA')).join('+');
+        const mark=i<topN?'<span style="color:var(--teal)" title="entra en el corpus citable">●</span> ':'<span style="color:var(--t3)" title="fuera del corpus citable">○</span> ';
+        return `<tr><td>${mark}${esc(String(p.title).slice(0,68))}${p.title.length>68?'…':''}${/book|chapter/i.test(p.itemType||'')?' <span style="color:var(--accent)" title="monografía o capítulo">📕</span>':''}${p.retracted?' <span style="color:var(--red)">⚠</span>':''}${(p.abstract||'').length>80?'':' <span style="color:var(--amber)" title="sin resumen">◌</span>'}</td><td>${esc(a||'—')}</td><td>${esc(p.year||'?')}</td><td style="text-align:right">${p.citations||0}</td><td>${esc(srcs)}</td></tr>`;
+      }).join('')}
+      </tbody></table></div>
+      ${papers.length>30?`<div style="font-size:11px;color:var(--t3);margin-bottom:12px">… y ${papers.length-30} más. Solo las <strong>${topN}</strong> marcadas con ● formarán el corpus citable.</div>`:''}
+      <div style="display:flex;gap:10px;justify-content:flex-end">
+        <button class="btn btn-danger" id="cpCancel">Cancelar</button>
+        <button class="btn btn-primary" id="cpContinue">Continuar y redactar →</button>
+      </div></div>`;
+    document.body.appendChild(ov);
+    const done=v=>{ov.remove();resolve(v);};
+    ov.querySelector('#cpContinue').onclick=()=>done(true);
+    ov.querySelector('#cpCancel').onclick=()=>done(false);
+  });
+}
+
 async function startGeneration(){
   if(isRunning)return;
   const apiKey=document.getElementById('apiKey').value.trim();
@@ -1231,6 +2226,7 @@ async function startGeneration(){
   if(document.getElementById('saveKey').checked)localStorage.setItem('humanitas_apikey',apiKey);
 
   isRunning=true;tStart=Date.now();logCount=0;shouldStop=false;
+  resetUsage();
   document.getElementById('btnGen').disabled=true;
   document.getElementById('btnGen').innerHTML='<span class="pulsing">⏳</span> Generando...';
   document.getElementById('btnStop').disabled=false;
@@ -1253,184 +2249,255 @@ async function startGeneration(){
   const doEnh=document.getElementById('tog-enhancer').classList.contains('on');
   const doPrisma=document.getElementById('tog-prisma').classList.contains('on');
   const doSynth=document.getElementById('tog-synth').classList.contains('on');
+  const doNarrator=document.getElementById('tog-narrator').classList.contains('on');
+  const doRetract=document.getElementById('tog-retract').classList.contains('on');
+  const doAudit=document.getElementById('tog-audit').classList.contains('on');
   const temp=parseFloat(document.getElementById('temperature').value)||0.7;
   const maxQ=parseInt(document.getElementById('maxQueries').value)||4;
   const topP=parseInt(document.getElementById('topPapers').value)||25;
+  const conc=parseInt(document.getElementById('concurrency')?.value)||4;
 
-  const useOA=document.getElementById('chk-oa').checked;
-  const useSS=document.getElementById('chk-ss').checked;
-  const useCR=document.getElementById('chk-cr').checked;
-  const useAX=document.getElementById('chk-ax').checked;
-  const useEP=document.getElementById('chk-ep').checked;
-  const usePM=document.getElementById('chk-pm').checked;
-  const limOA=parseInt(document.getElementById('lim-oa').value)||30;
-  const limSS=parseInt(document.getElementById('lim-ss').value)||25;
-  const limCR=parseInt(document.getElementById('lim-cr').value)||20;
-  const limAX=parseInt(document.getElementById('lim-ax').value)||15;
-  const limEP=parseInt(document.getElementById('lim-ep').value)||15;
-  const limPM=parseInt(document.getElementById('lim-pm').value)||15;
+  const srcCfg=[
+    {id:'oa',name:'OpenAlex',fn:searchOA},
+    {id:'ss',name:'Semantic Scholar',fn:searchSS},
+    {id:'cr',name:'CrossRef',fn:searchCR},
+    {id:'ax',name:'arXiv',fn:searchAX},
+    {id:'ep',name:'Europe PMC',fn:searchEPMC},
+    {id:'pm',name:'PubMed',fn:searchPM},
+  ].filter(s=>document.getElementById('chk-'+s.id).checked)
+   .map(s=>({...s,lim:parseInt(document.getElementById('lim-'+s.id).value)||20}));
 
   const discCtx=DISCIPLINE_PROMPTS[currentDisc]||DISCIPLINE_PROMPTS.social;
   const workTypeCtx=currentWorkType||'revisión de literatura';
+  const flow={perSource:[],queries:[],identified:0,duplicates:0,unique:0,excludedYear:0,excludedRetracted:0,eligible:0,inContext:0,cited:0,markers:0};
 
   try{
-    // ── FASE 1: RESEARCH ──────────────────────────
+    // ══ FASE 1: RESEARCH ══════════════════════════
     setPhase(1,'active');setHPStep(0);
     log('📚 ── FASE 1: RESEARCH ──────────────────────','info');
     log(`🎓 Disciplina: ${currentDisc.toUpperCase()} · Tipo: ${workTypeCtx}`,'info');
+    const yr=getYearRange();
+    const apiYr=yr.soft?null:yr;
+    log(yr.soft?`📅 Periodo ${yr.from}–${yr.to} en modo flexible: orienta las consultas pero no descarta obras anteriores.`
+               :`📅 Periodo estricto: ${yr.from}–${yr.to} (las monografías y capítulos se conservan igualmente).`,'info');
 
-    log('🤖 Scout: planificando búsqueda académica...','info');
+    log('🤖 Scout: planificando la búsqueda...','info');
     let plan={research_questions:[],search_terms:[topic+(kw?' '+kw:'')],key_areas:[]};
     try{
-      const raw=await callAI(apiKey,[{role:'user',content:`Plan a "${workTypeCtx}" in ${discCtx.scoutContext} on: "${topic}"\nGenerate JSON:\n- research_questions: 4-5 specific research questions appropriate for this work type\n- search_terms: ${maxQ} specific academic queries (include relevant disciplinary terminology)\n- key_areas: 3-5 thematic areas\nJSON only.`}],getTokens('scout'),0.5);
+      const raw=await callAgent('scout',apiKey,[{role:'user',content:`Planifica un trabajo del tipo "${workTypeCtx}" en el ámbito de ${discCtx.scoutContext}, sobre: "${topic}".\nDevuelve solo JSON con:\n- research_questions: 4-5 preguntas de investigación propias del tipo de trabajo\n- search_terms: ${maxQ} consultas académicas específicas (incluye la terminología disciplinar pertinente; si el tema lo requiere, alguna consulta en inglés y otra en la lengua del objeto de estudio)\n- key_areas: 3-5 áreas temáticas\nSolo JSON.`}],getTokens('scout'),0.5);
       plan=JSON.parse(raw.replace(/```json|```/g,'').trim());
       log(`✅ Scout: ${(plan.key_areas||[]).join(' · ')}`,'ok');
-    }catch(e){log('⚠ Scout JSON fallido, usando query directa.','warn');}
+    }catch(e){log('⚠ Scout JSON fallido, usando consulta directa.','warn');}
 
     const queries=(plan.search_terms||[topic]).slice(0,maxQ).map(q=>kw?`${q} ${kw}`:q);
+    flow.queries=queries;
 
-    setHPStep(0);
-    let allPapers=[];
-    for(let qi=0;qi<queries.length;qi++){
-      if(shouldStop)throw new Error('__STOPPED__');
-      const q=queries[qi];
-      log(`🔍 Query ${qi+1}/${queries.length}: "${q.slice(0,50)}"`,'info');
-      if(useOA){const p=await searchOA(q,limOA);log(`  OpenAlex: ${p.length}`,'ok');allPapers.push(...p);}
-      if(shouldStop)throw new Error('__STOPPED__');
-      if(useSS){const p=await searchSS(q,limSS);log(`  Semantic Scholar: ${p.length}`,'ok');allPapers.push(...p);}
-      if(shouldStop)throw new Error('__STOPPED__');
-      if(useCR){const p=await searchCR(q,limCR);log(`  CrossRef: ${p.length}`,'ok');allPapers.push(...p);}
-      if(shouldStop)throw new Error('__STOPPED__');
-      if(useAX){const p=await searchAX(q,limAX);log(`  arXiv: ${p.length}`,'ok');allPapers.push(...p);}
-      if(shouldStop)throw new Error('__STOPPED__');
-      if(useEP){const p=await searchEPMC(q,limEP);log(`  EuropePMC: ${p.length}`,'ok');allPapers.push(...p);}
-      if(shouldStop)throw new Error('__STOPPED__');
-      if(usePM){const p=await searchPM(q,limPM);log(`  PubMed: ${p.length}`,'ok');allPapers.push(...p);}
+    // búsquedas en paralelo
+    const jobs=[];queries.forEach((q,qi)=>srcCfg.forEach(s=>jobs.push({q,qi,s})));
+    log(`🔍 ${jobs.length} búsquedas (${queries.length} consultas × ${srcCfg.length} bases) · concurrencia ${conc}`,'info');
+    const results=await pMap(jobs,async job=>{
+      if(shouldStop)return [];
+      const p=await job.s.fn(job.q,job.s.lim,apiYr);
+      log(`  ${job.s.name} · q${job.qi+1}: ${p.length}`,p.length?'ok':'warn');
+      return p;
+    },conc);
+    if(shouldStop)throw new Error('__STOPPED__');
+    let raw=results.flat().filter(Boolean);
+    if(importedCorpus.length){raw=raw.concat(importedCorpus);log(`📥 + ${importedCorpus.length} obras propias importadas`,'ok');}
+
+    const perSrc={};raw.forEach(p=>{perSrc[p.source]=(perSrc[p.source]||0)+1;});
+    flow.identified=raw.length;
+    flow.perSource=Object.entries(perSrc).map(([s,n])=>`${s}: ${n}`);
+
+    let allPapers=dedup(raw);
+    flow.duplicates=raw.length-allPapers.length;flow.unique=allPapers.length;
+    log(`🔗 Deduplicación por DOI + título: ${raw.length} → ${allPapers.length}`,'ok');
+
+    const before=allPapers.length;
+    const antes=[...allPapers];
+    allPapers=filterByYear(allPapers,yr);
+    const filteredOutPapers=antes.filter(p=>!allPapers.includes(p));
+    flow.excludedYear=filteredOutPapers.length;
+    if(before!==allPapers.length){
+      const perdidas=filteredOutPapers.filter(p=>/book|chapter/i.test(p.itemType||'')).length;
+      log(`🗓 Filtro temporal: ${before} → ${allPapers.length}${perdidas?` (⚠ ${perdidas} monografías descartadas)`:''}`,'ok');
     }
-    allPapers=sortPapers(dedup(allPapers));
-    allPapersStore=allPapers;
-    log(`📊 Total deduplicado: ${allPapers.length} fuentes`,'ok');
 
-    const papersFormatted=fmt(allPapers,topP);
+    if(doRetract&&allPapers.length){
+      log('🚩 Comprobando retractaciones en OpenAlex...','info');
+      const n=await checkRetractions(allPapers);
+      const b2=allPapers.length;
+      allPapers=allPapers.filter(p=>!p.retracted);
+      flow.excludedRetracted=b2-allPapers.length;
+      log(n?`⚠ ${n} obras retractadas excluidas.`:'✅ Ninguna retractación detectada.',n?'warn':'ok');
+    }
+
+    allPapers=rankPapers(allPapers);
+    flow.eligible=allPapers.length;
+    allPapersStore=allPapers;
+    log(`📊 Corpus final: ${allPapers.length} obras`,'ok');
+
+    if(!await checkpointPapers(allPapers,topic,yr))throw new Error('__STOPPED__');
+
+    const corpus=allPapers.slice(0,topP);
+    flow.inContext=corpus.length;
+    const papersFormatted=citationList(corpus);
+    log(`🔖 Corpus de citación fijado: ${corpus.length} obras numeradas [1]–[${corpus.length}]`,'ok');
 
     setHPStep(1);
     log('🤖 Signal: análisis de relevancia disciplinar...','info');
-    const signalAnalysis=await callAI(apiKey,[
-      {role:'system',content:`You are a Source Finder specializing in ${discCtx.scoutContext}.`},
-      {role:'user',content:`Analyze ${allPapers.length} academic sources for a "${workTypeCtx}" on "${topic}".\n\nSOURCES:\n${papersFormatted}\n\n1. TOP 15 most relevant sources\n2. Key academic venues and journals\n3. Thematic clusters (3-5)\n4. Temporal and intellectual trends\n5. Most cited authors`}
+    const signalAnalysis=await callAgent('signal',apiKey,[
+      {role:'system',content:`Eres un especialista en ${discCtx.scoutContext}. Escribe en ${lang}. Refiérete a las obras SIEMPRE por su índice [n].`},
+      {role:'user',content:`Analiza las ${corpus.length} obras del corpus numerado para un trabajo del tipo "${workTypeCtx}" sobre "${topic}".\n\nCORPUS:\n${papersFormatted}\n\n1. Las 15 obras más relevantes, citadas por su índice [n]\n2. Revistas y editoriales de referencia\n3. Clústeres temáticos (3-5), indicando qué índices [n] los componen\n4. Trayectoria intelectual y temporal\n5. Autores más citados\n\nNo menciones ninguna obra que no esté en el corpus.`}
     ],getTokens('signal'),temp);
     log('✅ Signal completado.','ok');
 
-    log('🤖 Scribe: revisión de la literatura base...','info');
-    const mainReview=await callAI(apiKey,[
-      {role:'system',content:`You are a Literature Reviewer specializing in ${discCtx.scoutContext}. Write in ${lang}. ${discCtx.crafterContext}`},
-      {role:'user',content:`Write a comprehensive literature review (état de la question / state of the art) for a "${workTypeCtx}" on: "${topic}"\n\nBased on:\n${papersFormatted}\n\nCover: 1) Intellectual genealogy and historical background 2) Main theoretical frameworks and schools of thought 3) Key empirical/doctrinal contributions 4) Methodological debates 5) Existing gaps and controversies\nCite as [Author, Year].${instruct?'\n\nInstructions: '+instruct:''}`}
+    log('🤖 Scribe: estado de la cuestión...','info');
+    const mainReview=await callAgent('scribe',apiKey,[
+      {role:'system',content:`Eres un revisor de literatura especializado en ${discCtx.scoutContext}. Escribe en ${lang}. ${discCtx.crafterContext}`},
+      {role:'user',content:`Redacta el estado de la cuestión para un trabajo del tipo "${workTypeCtx}" sobre: "${topic}"\n\nCORPUS NUMERADO (única fuente admisible de citas, índices 1–${corpus.length}):\n${papersFormatted}\n\nCubre: 1) genealogía intelectual y antecedentes 2) marcos teóricos y escuelas 3) aportaciones empíricas o doctrinales principales 4) debates metodológicos 5) lagunas y controversias.\n\nREGLA DE CITACIÓN INVIOLABLE:\n- Cita exclusivamente con marcadores numéricos [n], donde n es el índice del corpus (1–${corpus.length}).\n- Puedes agrupar: [3, 7, 12].\n- Nunca escribas nombres de autores entre corchetes ni cites obras que no estén en el corpus.\n- Toda afirmación sustantiva debe llevar su [n]. Si el corpus no la respalda, no la escribas.${instruct?'\n\nInstrucciones: '+instruct:''}`}
     ],getTokens('scribe'),temp);
-    log(`✅ Scribe: ${mainReview.split(' ').length} palabras.`,'ok');
+    log(`✅ Scribe: ${mainReview.split(/\s+/).length} palabras.`,'ok');
 
     let trendAnalysis='';
     if(doBiblio){
-      log('🤖 DataAnalyst: tendencias bibliométricas...','info');
-      const pd=allPapers.slice(0,50).map(p=>`- ${p.title} (${p.year||'?'}) | ${p.journal||'?'} | Cites: ${p.citations} | ${p.source}`).join('\n');
-      trendAnalysis=await callAI(apiKey,[{role:'system',content:`You are an Academic Trend Analyzer for ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Analyze publication and intellectual trends:\n${pd}\n\n1. Volume by decade/year 2. Most influential journals 3. Intellectual trajectory 4. Emerging research areas 5. Key authors and schools.`}],getTokens('data_analyst'),temp);
+      log('🤖 DataAnalyst: tendencias intelectuales...','info');
+      const pd=allPapers.slice(0,60).map(p=>`- ${p.title} (${p.year||'?'}) | ${p.journal||p.publisher||'?'} | ${itemTypeLabel(p.itemType)} | Citas: ${p.citations} | ${(p.sources||[p.source]).join('/')}`).join('\n');
+      trendAnalysis=await callAgent('data_analyst',apiKey,[{role:'system',content:`Eres analista de tendencias académicas en ${discCtx.scoutContext}. Escribe en ${lang}.`},{role:'user',content:`Analiza las tendencias de publicación e intelectuales:\n${pd}\n\n1. Volumen por década 2. Revistas y editoriales más influyentes 3. Trayectoria intelectual 4. Áreas emergentes 5. Autores y escuelas de referencia.`}],getTokens('data_analyst'),temp);
       log('✅ DataAnalyst completado.','ok');
     }
 
     let gapsText='';
     if(doGaps){
       log('🤖 GapDetector: identificando lagunas...','info');
-      const abstracts=allPapers.slice(0,30).map((p,i)=>`[${i+1}] ${p.title} (${p.year||'?'}): ${p.abstract||'(no abstract)'}`).join('\n\n');
-      const rqs=(plan.research_questions||[]).map(q=>`- ${q}`).join('\n')||`- What is the current state of scholarship on ${topic}?`;
-      gapsText=await callAI(apiKey,[{role:'system',content:`You are a Lacuna Identifier specializing in ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Analyze lacunae and research gaps for: "${topic}" (work type: ${workTypeCtx})\n\n${discCtx.gapContext}\n\nRESEARCH QUESTIONS:\n${rqs}\n\nSOURCES:\n${abstracts}\n\nFor each gap:\nGAP [N]: [title]\nStatus: Unresolved / Partially addressed\nEvidence: [what exists and why it falls short]\nSuggested contribution: [type and approach needed]\n\n4-6 specific gaps.`}],getTokens('gap_detector'),temp);
+      const abstracts=corpus.slice(0,30).map((p,i)=>`[${i+1}] ${p.title} (${p.year||'?'}): ${p.abstract||'(sin resumen)'}`).join('\n\n');
+      const rqs=(plan.research_questions||[]).map(q=>`- ${q}`).join('\n')||`- ¿Cuál es el estado de la cuestión sobre ${topic}?`;
+      gapsText=await callAgent('gap_detector',apiKey,[{role:'system',content:`Eres identificador de lagunas en ${discCtx.scoutContext}. Escribe en ${lang}.`},{role:'user',content:`Analiza las lagunas de investigación sobre: "${topic}" (tipo de trabajo: ${workTypeCtx})\n\n${discCtx.gapContext}\n\nPREGUNTAS DE INVESTIGACIÓN:\n${rqs}\n\nCORPUS:\n${abstracts}\n\nPara cada laguna:\nGAP [N]: [título]\nEstado: sin resolver / parcialmente abordada\nEvidencia: [qué existe y por qué resulta insuficiente, citando [n]]\nAportación sugerida: [tipo de trabajo y enfoque]\n\n4-6 lagunas concretas.`}],getTokens('gap_detector'),temp);
       gapsStore=gapsText;
       log('✅ GapDetector completado.','ok');
     }
 
     setPhase(1,'done');setPhase(2,'active');
 
-    // ── FASE 2: STRUCTURE ─────────────────────────
+    // ══ FASE 2: STRUCTURE ═════════════════════════
     setHPStep(2);
     log('🏗️ ── FASE 2: STRUCTURE ──────────────────────','info');
-    // Default structures by discipline
-    let defaultStructure={};
-    if(currentDisc==='legal'){
-      defaultStructure={"Introducción":700,"Marco jurídico y normativo":1200,"Análisis doctrinal":2000,"Jurisprudencia relevante":1500,"Derecho comparado":1000,"Lagunas y propuestas de reforma":700,"Conclusiones":500};
-    } else if(currentDisc==='human'){
-      defaultStructure={"Introducción":700,"Contextualización histórica e intelectual":1200,"Principales corrientes y debates":2000,"Análisis hermenéutico":1500,"Recepción e influencia":800,"Perspectivas actuales y líneas abiertas":600,"Conclusiones":500};
-    } else {
-      defaultStructure={"Introducción":700,"Marco teórico":1200,"Estado de la cuestión":2000,"Enfoques metodológicos":1200,"Hallazgos y debates principales":1200,"Lagunas y agenda de investigación":700,"Conclusiones":500};
-    }
-    let structure=defaultStructure;
+    let structure=DEFAULT_STRUCTURE(currentDisc,lang,wc);
     try{
-      const sr=await callAI(apiKey,[{role:'user',content:`Design a structure for a "${workTypeCtx}" in ${discCtx.scoutContext} on: "${topic}"\n~${wc} words. In ${lang}.\n${instruct?'Instructions: '+instruct+'\n':''}\nReturn JSON: keys=section titles (in ${lang}), values=word counts. 6-8 sections. Sum≈${wc}.\nJSON only.`}],getTokens('architect'),0.5);
+      const sr=await callAgent('architect',apiKey,[{role:'user',content:`Diseña la estructura de un trabajo del tipo "${workTypeCtx}" en ${discCtx.scoutContext} sobre: "${topic}"\nExtensión total ~${wc} palabras. Los TÍTULOS DE SECCIÓN deben ir en ${lang}.\n${instruct?'Instrucciones: '+instruct+'\n':''}\nDevuelve solo JSON: claves = títulos de sección, valores = número de palabras. Entre 6 y 8 secciones. La suma ≈ ${wc}.`}],getTokens('architect'),0.5);
       const parsed=JSON.parse(sr.replace(/```json|```/g,'').trim());
       if(typeof parsed==='object'&&Object.keys(parsed).length>3)structure=parsed;
       log(`✅ Architect: ${Object.keys(structure).join(' → ')}`,'ok');
-    }catch(e){log('⚠ Usando estructura por defecto para '+currentDisc,'warn');}
+    }catch(e){log('⚠ Usando la estructura por defecto de '+currentDisc,'warn');}
 
     setPhase(2,'done');setPhase(3,'active');
 
-    // ── FASE 3: WRITING ───────────────────────────
+    // ══ FASE 3: WRITING ═══════════════════════════
     setHPStep(3);
     log('✍️ ── FASE 3: WRITING ─────────────────────────','info');
     const sections=Object.keys(structure);
     const sectionTexts={};let prevContent='';
+    const audits=[];const threadNotes=[];
 
     for(let i=0;i<sections.length;i++){
+      if(shouldStop)throw new Error('__STOPPED__');
       const sec=sections[i];const tgt=structure[sec];
       log(`✍️ Crafter: "${sec}" (~${tgt} palabras)...`,'info');
-      const text=await callAI(apiKey,[
-        {role:'system',content:`You are an Academic Section Writer for a "${workTypeCtx}" in ${discCtx.scoutContext}. Write in ${lang}. ${discCtx.crafterContext} Citation style: ${cite}.`},
-        {role:'user',content:`Write the "${sec}" section.\nTopic: ${topic}\nTarget: ~${tgt} words\n${instruct?'Instructions: '+instruct+'\n':''}\nGaps identified:\n${gapsText?gapsText.slice(0,600):'N/A'}\n\nBase on this literature review:\n${mainReview}\n\nSource analysis:\n${signalAnalysis}\n\nCite as [Author, Year] in ${cite} style.`}
-      ],getTokens('crafter'),temp);
+      streamTarget(sec);
+      let text=await callAgent('crafter',apiKey,[
+        {role:'system',content:`Eres redactor de secciones académicas para un trabajo del tipo "${workTypeCtx}" en ${discCtx.scoutContext}. Escribe en ${lang}. ${discCtx.crafterContext} REGLA INVIOLABLE: cita únicamente con índices numéricos [n] del corpus, donde 1 ≤ n ≤ ${corpus.length}. Nunca escribas nombres de autores entre corchetes ni inventes referencias. La conversión al estilo ${cite} se hace automáticamente después.`},
+        {role:'user',content:`Redacta la sección "${sec}".\nTema: ${topic}\nExtensión objetivo: ~${tgt} palabras\n${instruct?'Instrucciones: '+instruct+'\n':''}\nCORPUS NUMERADO (única fuente admisible de citas, 1–${corpus.length}):\n${papersFormatted}\n\nEstado de la cuestión de apoyo:\n${mainReview}\n\nAnálisis de relevancia:\n${signalAnalysis}\n\nLagunas detectadas:\n${gapsText?gapsText.slice(0,600):'N/D'}\n\nREGLA DE CITACIÓN:\n- Solo marcadores [n] con 1 ≤ n ≤ ${corpus.length}. Agrupa cuando proceda: [4, 11, 19].\n- Prohibido [Autor, Año] o cualquier referencia ajena al corpus.\n- Cada párrafo debe contener al menos una cita.\n- No atribuyas a una obra tesis que no consten en su resumen.`}
+      ],getTokens('crafter'),temp,true);
+      streamTarget(null);
+
+      let audit=auditSection(text,corpus.length);
+      if(audit.invalid.length||audit.authorYear.length){
+        log(`⚠ "${sec}": ${audit.invalid.length} citas fuera de rango, ${audit.authorYear.length} no ancladas. Reparando...`,'warn');
+        text=stripInvalidCites(text,corpus.length)
+          .replace(/\[[A-ZÁÉÍÓÚÑ][^\]\d]{2,40},?\s*(19|20)\d{2}[a-z]?\]/g,'')
+          .replace(/\(\s*\)/g,'').replace(/ +([.,;:])/g,'$1').replace(/ {2,}/g,' ');
+        audit=auditSection(text,corpus.length);
+      }
+      if(audit.valid.length===0&&audit.words>80){
+        log(`⚠ "${sec}" sin ninguna cita: reescribiendo con exigencia de citación...`,'warn');
+        try{
+          text=await callAgent('crafter',apiKey,[
+            {role:'system',content:`Escribe en ${lang}. Cada afirmación sustantiva debe ir seguida de [n] con 1 ≤ n ≤ ${corpus.length}.`},
+            {role:'user',content:`Reescribe este texto añadiendo las citas [n] que faltan, sin alterar su contenido.\n\nCORPUS:\n${papersFormatted}\n\nTEXTO:\n${text}`}
+          ],getTokens('crafter'),0.3);
+          text=stripInvalidCites(text,corpus.length);
+          audit=auditSection(text,corpus.length);
+        }catch(e){}
+      }
+      audits.push({...audit,section:sec});
 
       if(doThread&&prevContent&&i>0){
-        try{await callAI(apiKey,[{role:'user',content:`Check argumentative coherence:\nPREV (last 400):\n${prevContent.slice(-400)}\nCURR (first 400):\n${text.slice(0,400)}\nNote any logical gaps briefly.`}],getTokens('thread'),0.3);}catch(e){}
+        try{
+          const note=await callAgent('thread',apiKey,[{role:'user',content:`Revisa la continuidad argumentativa entre dos secciones consecutivas. Responde en ${lang}.\nANTERIOR (final):\n${prevContent.slice(-500)}\nACTUAL (inicio):\n${text.slice(0,500)}\nSi hay salto lógico o repetición, indícalo en 1-2 frases. Si la transición es correcta, responde exactamente: OK`}],getTokens('thread'),0.3);
+          if(!/^ok\.?$/i.test(note.trim()))threadNotes.push({section:sec,note});
+        }catch(e){}
       }
 
-      let finalText=text;
-      try{finalText=await callAI(apiKey,[{role:'system',content:`You are a Voice Refiner for ${discCtx.scoutContext} writing. Write in ${lang}.`},{role:'user',content:`Refine the academic voice of this section for a "${workTypeCtx}":\n\n${text}\n\nImprove: 1) appropriate disciplinary register 2) argumentative flow 3) transitions 4) remove redundancies.\nPreserve all citations. Return text only.`}],getTokens('narrator'),temp);}catch(e){}
+      if(doNarrator){
+        try{
+          const refined=await callAgent('narrator',apiKey,[{role:'system',content:`Eres editor de estilo para ${discCtx.scoutContext}. Escribe en ${lang}. No alteres, elimines ni reordenes los marcadores [n].`},{role:'user',content:`Refina la voz académica de esta sección para un "${workTypeCtx}":\n\n${text}\n\nMejora: 1) registro disciplinar 2) flujo argumentativo 3) transiciones 4) redundancias.\nCONSERVA ÍNTEGROS todos los marcadores [n]. Devuelve solo el texto.`}],getTokens('narrator'),temp);
+          const a2=auditSection(refined,corpus.length);
+          if(a2.valid.length>=audit.valid.length*0.9){text=refined;audits[audits.length-1]={...a2,section:sec};}
+          else log(`⚠ Narrator descartado en "${sec}": habría eliminado ${audit.valid.length-a2.valid.length} citas.`,'warn');
+        }catch(e){}
+      }
 
-      sectionTexts[sec]=finalText;prevContent=finalText;
-      log(`✅ "${sec}": ${finalText.split(' ').length} palabras`,'ok');
+      sectionTexts[sec]=text;prevContent=text;
+      const a=audits[audits.length-1];
+      log(`✅ "${sec}": ${a.words} palabras · ${a.valid.length} citas · ${a.density.toFixed(1)}/1.000`,a.valid.length?'ok':'warn');
       saveDraft(sectionTexts,allPapers,gapsText,{topic,time:Math.round((Date.now()-tStart)/1000)+'s'});
     }
     sectionTextsStore={...sectionTexts};
     setPhase(3,'done');
 
-    // ── FASE 4: VALIDATION ────────────────────────
-    let qs='N/A';
+    // ══ FASE 4: VALIDATION ════════════════════════
+    let qs='N/A';const auditFindings={claims:[],cites:[],thread:threadNotes,referee:[]};
     if(!fastMode){
       setPhase(4,'active');setHPStep(4);
       log('🔍 ── FASE 4: VALIDATION ─────────────────────','info');
-      const refs=allPapers.slice(0,30).map((p,i)=>{const a=p.authors.slice(0,3).join(', ')+(p.authors.length>3?' et al.':'');return`[${i+1}] ${a}. "${p.title}". ${p.journal||''}, ${p.year||''}.`;}).join('\n');
-      const fullText=Object.values(sectionTexts).join('\n\n');
-      const chunks=[];for(let i=0;i<fullText.length;i+=5000)chunks.push(fullText.slice(i,i+5000));
-      for(let i=0;i<Math.min(chunks.length,3);i++){
-        await callAI(apiKey,[{role:'user',content:`Flag unsupported claims in this ${currentDisc} text:\n\n${chunks[i]}\n\n1) Strong claims without citation 2) Overgeneralizations 3) Anachronistic interpretations. Be brief.`}],getTokens('skeptic'),0.3);
-        await callAI(apiKey,[{role:'user',content:`Validate citations in ${cite} style:\n\n${chunks[i]}\n\nRefs:\n${refs}\n\nCheck: text-ref match, consistency.`}],getTokens('verifier'),0.3);
+      const refsList=corpus.map((p,i)=>`[${i+1}] ${(p.authors||[]).slice(0,3).join(', ')}. "${p.title}". ${p.journal||p.publisher||''}, ${p.year||''}.`).join('\n');
+      for(const [sec,txt] of Object.entries(sectionTexts)){
+        if(shouldStop)throw new Error('__STOPPED__');
+        if(doAudit){
+          const sk=await callAgent('skeptic',apiKey,[{role:'user',content:`Señala las afirmaciones sin respaldo documental en este texto de ${currentDisc}. Responde en ${lang}.\n\n${txt}\n\nLista: 1) afirmaciones fuertes sin cita [n] 2) generalizaciones excesivas 3) interpretaciones anacrónicas.\nUna línea por incidencia, citando el fragmento entre comillas. Si no hay ninguna, responde exactamente: NINGUNA`}],getTokens('skeptic'),0.3);
+          if(sk&&!/^(ninguna|none|ok)\.?$/i.test(sk.trim()))auditFindings.claims.push({section:sec,text:sk});
+          const vf=await callAgent('verifier',apiKey,[{role:'user',content:`Comprueba que cada cita [n] encaja con el contenido de la obra n. Responde en ${lang}.\n\nTEXTO:\n${txt}\n\nCORPUS:\n${refsList}\n\nSeñala solo los casos en que lo afirmado NO se corresponde con la obra citada (por tema, periodo, tradición o método). Una línea por incidencia. Si todas encajan, responde exactamente: OK`}],getTokens('verifier'),0.3);
+          if(vf&&!/^(ok|correcto)\.?$/i.test(vf.trim()))auditFindings.cites.push({section:sec,text:vf});
+        }
+        const rev=await callAgent('referee',apiKey,[{role:'user',content:`Revisa por pares esta sección de un "${workTypeCtx}" en ${discCtx.scoutContext}. Responde en ${lang}.\n\n${txt.slice(0,2500)}\n\nPuntúa de 1 a 5: RIGOR, COBERTURA, CLARIDAD, ORIGINALIDAD, ADECUACIÓN_DISCIPLINAR.\nTermina con: OVERALL: X/5`}],getTokens('referee'),0.3);
+        const entry={section:sec,text:rev};
+        const m=rev.match(/OVERALL[:\s]+(\d+(?:\.\d+)?)\s*\/\s*5/i);if(m)entry.score=parseFloat(m[1]);
+        auditFindings.referee.push(entry);
       }
-      const scores=[];
-      for(const[sec,txt]of Object.entries(sectionTexts)){
-        const rev=await callAI(apiKey,[{role:'user',content:`Peer review this section of a ${workTypeCtx} in ${discCtx.scoutContext}:\n\n${txt.slice(0,2000)}\n\nScore 1-5: RIGOR, COVERAGE, CLARITY, ORIGINALITY, DISCIPLINARY_APPROPRIATENESS.\nEnd with: OVERALL: X/5`}],getTokens('referee'),0.3);
-        const m=rev.match(/OVERALL[:\s]+(\d+(?:\.\d+)?)\s*\/\s*5/i);if(m)scores.push(parseFloat(m[1]));
-      }
-      if(scores.length){const avg=scores.reduce((a,b)=>a+b,0)/scores.length;qs=`${Math.round(avg/5*100)}/100 (avg ${avg.toFixed(1)}/5)`;log(`📊 Quality Score: ${qs}`,'ok');}
+      const scores=auditFindings.referee.map(r=>r.score).filter(x=>typeof x==='number');
+      if(scores.length){const avg=scores.reduce((a,b)=>a+b,0)/scores.length;qs=`${avg.toFixed(1)}/5`;log(`📊 Juicio del referee (no calibrado): ${qs}`,'ok');}
       setPhase(4,'done');
     }
     qualityScore=qs;
 
-    // ── FASE 5: POLISH ────────────────────────────
+    // ══ FASE 5: POLISH ════════════════════════════
     let abstract='',keywords='',highlights='';
     if(!fastMode){
       setPhase(5,'active');setHPStep(5);
       log('✨ ── FASE 5: POLISH ──────────────────────────','info');
       for(const sec of Object.keys(sectionTexts)){
-        try{sectionTexts[sec]=await callAI(apiKey,[{role:'system',content:`You are a Final Editor for ${discCtx.scoutContext} academic writing. Write in ${lang}.`},{role:'user',content:`Final edit for a "${workTypeCtx}":\n\n${sectionTexts[sec]}\n\nFix grammar, disciplinary terminology, register. Return text only.`}],getTokens('polish'),temp);}catch(e){}
+        if(shouldStop)throw new Error('__STOPPED__');
+        try{
+          const b1=auditSection(sectionTexts[sec],corpus.length);
+          const pol=await callAgent('polish',apiKey,[{role:'system',content:`Eres editor final para textos de ${discCtx.scoutContext}. Escribe en ${lang}. Los marcadores [n] son inviolables: no los elimines, no los cambies de frase, no los renumeres.`},{role:'user',content:`Edición final para un "${workTypeCtx}":\n\n${sectionTexts[sec]}\n\nCorrige gramática, terminología disciplinar y registro. No reescribas el contenido. Devuelve solo el texto.`}],getTokens('polish'),Math.min(temp,0.4));
+          const b2=auditSection(pol,corpus.length);
+          if(b2.valid.length>=b1.valid.length*0.95)sectionTexts[sec]=stripInvalidCites(pol,corpus.length);
+          else log(`⚠ Polish descartado en "${sec}": perdía ${b1.valid.length-b2.valid.length} citas.`,'warn');
+        }catch(e){}
       }
       if(doEnh){
         log('🤖 Enhancer: resumen + palabras clave...','info');
-        const enhRaw=await callAI(apiKey,[{role:'system',content:`You are a Publication Enhancer for ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Generate for this "${workTypeCtx}":\n\n${Object.values(sectionTexts).join('\n\n').slice(0,6000)}\n\nABSTRACT (250 words): Aims/Methods/Results/Conclusions\nKEYWORDS: 6-8 disciplinary keywords in ${lang} separated by semicolons\nHIGHLIGHTS: 5 key contributions max 85 chars each\n\nUse exact labels: ABSTRACT:, KEYWORDS:, HIGHLIGHTS:`}],getTokens('enhancer'),temp);
+        const enhRaw=await callAgent('enhancer',apiKey,[{role:'system',content:`Eres editor de publicación para ${discCtx.scoutContext}. Escribe en ${lang}.`},{role:'user',content:`Genera para este "${workTypeCtx}":\n\n${Object.values(sectionTexts).join('\n\n').slice(0,7000)}\n\nABSTRACT (250 palabras): objeto, enfoque, resultados, conclusiones\nKEYWORDS: 6-8 descriptores disciplinares separados por punto y coma\nHIGHLIGHTS: 5 aportaciones clave, máx. 85 caracteres cada una\n\nUsa exactamente las etiquetas: ABSTRACT:, KEYWORDS:, HIGHLIGHTS:`}],getTokens('enhancer'),temp);
         const absM=enhRaw.match(/ABSTRACT:([\s\S]*?)(?=KEYWORDS:|$)/i);
         const kwM=enhRaw.match(/KEYWORDS:([\s\S]*?)(?=HIGHLIGHTS:|$)/i);
         const hlM=enhRaw.match(/HIGHLIGHTS:([\s\S]*?)$/i);
@@ -1439,54 +2506,109 @@ async function startGeneration(){
       setPhase(5,'done');
     }
 
-    let prismaText='';
+    // ══ CIERRE DE CITAS ═══════════════════════════
+    const finalAudits=Object.entries(sectionTexts).map(([sec,t])=>({...auditSection(t,corpus.length),section:sec}));
+    const fin=finalizeCitations(sectionTexts,corpus,cite);
+    const finalSections=fin.sections;
+    lastRefs=fin.refs;
+    flow.cited=fin.refs.length;
+    flow.markers=finalAudits.reduce((a,x)=>a+x.valid.length,0);
+    const modeTxt=fin.mode==='num'?'numeradas por orden de aparición':(fin.mode==='ap'?'convertidas a autor (MLA) y alfabetizadas':'convertidas a autor-fecha y alfabetizadas');
+    log(`🔖 Citas cerradas: ${flow.markers} marcadores → ${fin.refs.length} referencias ${modeTxt} (${cite}).`,'ok');
+
+    const metrics=computeMetrics(finalSections,corpus,fin.refs,finalAudits);
+    lastMetrics=metrics;
+
+    const srcList=srcCfg.map(s=>s.name).join(', ');
+    Object.assign(flow,{nSources:srcCfg.length,sources:srcList,period:`${yr.from}–${yr.to}`,
+      disc:currentDisc,workType:workTypeCtx,soft:yr.soft,model:document.getElementById('model').value,
+      date:new Date().toLocaleDateString('es')});
+    lastFlow=flow;
+
+    let methodText='';
     if(doPrisma){
-      const srcList=[useOA?'OpenAlex':'',useSS?'Semantic Scholar':'',useCR?'CrossRef':'',useAX?'arXiv':'',useEP?'Europe PMC':'',usePM?'PubMed':''].filter(Boolean).join(', ');
-      prismaText=await callAI(apiKey,[{role:'system',content:`You are a Methodology Designer for ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Write a Methodology section for this "${workTypeCtx}".\n\nSources consulted: ${srcList}\nSearch terms: ${queries.join('; ')}\nPeriod: last ${document.getElementById('years').value} years\nTotal sources found: ${allPapers.length}\n\nInclude: search strategy, inclusion/exclusion criteria, screening process, quality assessment appropriate for ${currentDisc}. ~400 words.`}],getTokens('methodology'),temp);
+      log('🤖 Methodology: metodología con recuentos reales...','info');
+      methodText=prismaText(flow);
+      try{
+        const extra=await callAgent('methodology',apiKey,[{role:'system',content:`Eres metodólogo en ${discCtx.scoutContext}. Escribe en ${lang}.`},{role:'user',content:`Redacta los criterios de inclusión y exclusión, el procedimiento de cribado y la evaluación de calidad para un "${workTypeCtx}", coherentes con estos recuentos reales (JSON, úsalos literalmente, no inventes cifras):\n${JSON.stringify(flow)}\n\n~250 palabras. No repitas el flujo de selección, que ya está descrito.`}],getTokens('methodology'),0.3);
+        methodText=methodText+'\n\n'+extra;
+      }catch(e){}
     }
     let synthText='';
-    if(doSynth){synthText=await callAI(apiKey,[{role:'system',content:`You are a Findings Synthesizer for ${discCtx.scoutContext}. Write in ${lang}.`},{role:'user',content:`Synthesize the key findings of this "${workTypeCtx}":\n\n${Object.values(sectionTexts).join('\n\n').slice(0,5000)}\n\n5-7 bullet points: main contributions, scholarly consensus, open debates, implications for practice or policy. Max 2 sentences each.`}],getTokens('results_synthesizer'),temp);}
+    if(doSynth){
+      synthText=await callAgent('results_synthesizer',apiKey,[{role:'system',content:`Eres sintetizador de hallazgos en ${discCtx.scoutContext}. Escribe en ${lang}.`},{role:'user',content:`Sintetiza los hallazgos de este "${workTypeCtx}":\n\n${Object.values(finalSections).join('\n\n').slice(0,6000)}\n\n5-7 puntos: aportaciones principales, consensos, debates abiertos, implicaciones. Máximo 2 frases cada uno.`}],getTokens('results_synthesizer'),temp);
+    }
 
-    const displaySections={...sectionTexts};
+    setLiveAgent&&setLiveAgent(null);
+
+    const displaySections={...finalSections};
     if(abstract)displaySections['Resumen / Abstract']=abstract+(keywords?'\n\n**Palabras clave:** '+keywords:'')+(highlights?'\n\n**Contribuciones:**\n'+highlights:'');
     if(synthText)displaySections['Síntesis ejecutiva']=synthText;
-    if(prismaText)displaySections['Metodología de revisión']=prismaText;
+    if(methodText)displaySections['Metodología de revisión']=methodText;
     if(trendAnalysis)displaySections['Análisis bibliométrico']=trendAnalysis;
 
     const elapsed=Math.round((Date.now()-tStart)/1000);
-    const srcList2=[useOA?'OpenAlex':'',useSS?'Semantic Scholar':'',useCR?'CrossRef':'',useAX?'arXiv':'',useEP?'Europe PMC':'',usePM?'PubMed':''].filter(Boolean).join(', ');
     let full=`# ${topic}\n## ${workTypeCtx}\n\n`;
-    full+=`*Humanitas · ${new Date().toLocaleDateString('es')} · ${document.getElementById('model').value} · ${cite}*\n`;
-    full+=`*Fuentes: ${srcList2} · Referencias: ${allPapers.length} · Tiempo: ${elapsed}s · Score: ${qs}*\n\n---\n\n`;
+    full+=`*Humanitas v2 · ${flow.date} · ${flow.model} · ${cite} · ${currentDisc}*\n`;
+    full+=`*Bases: ${srcList} · Corpus: ${allPapers.length} · Citadas: ${fin.refs.length} · Citas resueltas: ${(metrics.resolved*100).toFixed(0)}% · Tiempo: ${elapsed}s · Coste: $${runCost().toFixed(4)}*\n\n---\n\n`;
     Object.entries(displaySections).forEach(([sec,txt])=>{full+=`## ${sec}\n\n${txt}\n\n`;});
     full+=`---\n\n## Referencias bibliográficas\n\n`;
-    allPapers.slice(0,40).forEach((p,i)=>{const a=p.authors.slice(0,3).join(', ')+(p.authors.length>3?' et al.':'');full+=`[${i+1}] ${a||'Unknown'}. "${p.title}". ${p.journal||''}${p.year?', '+p.year:''}. ${p.doi?'DOI: https://doi.org/'+p.doi:p.url||''}\n`;});
+    if(fin.refs.length)fin.refs.forEach(r=>{full+=`${r.line}\n\n`;});
+    else full+=`*(El texto no contiene ninguna cita resoluble contra el corpus.)*\n\n`;
+    full+=`---\n\n## Anexo A · Métricas de la revisión\n\n| Métrica | Valor |\n|---|---|\n`;
+    full+=`| Palabras | ${metrics.words.toLocaleString()} |\n| Marcadores de cita | ${metrics.citations} |\n| Citas resueltas contra el corpus | ${(metrics.resolved*100).toFixed(1)}% |\n| Densidad de citas | ${metrics.density.toFixed(1)} por 1.000 palabras |\n| Obras citadas | ${metrics.refCount} |\n| Cobertura del corpus | ${(metrics.coverage*100).toFixed(0)}% |\n| Secciones sin citas | ${metrics.sectionsNoCite} |\n| Monografías y capítulos | ${(metrics.monographs*100).toFixed(0)}% |\n| Amplitud temporal | ${metrics.yearMin||'—'}–${metrics.yearMax||'—'} |\n| Concentración de venues (HHI) | ${metrics.venueHHI.toFixed(3)} |\n| Referencias con DOI | ${(metrics.doiRatio*100).toFixed(0)}% |\n| Acceso abierto | ${(metrics.oaRatio*100).toFixed(0)}% |\n| Obras retractadas | ${metrics.retracted} |\n| Juicio del referee (no calibrado) | ${qs} |\n\n`;
+    full+=`---\n\n## Anexo B · Corpus consultado (${allPapers.length} obras)\n\n`;
+    full+=`| # | Obra | Autoría | Año | Tipo | Fuente | Citas | DOI |\n|---|---|---|---|---|---|---|---|\n`;
+    allPapers.forEach((p,i)=>{const a=(p.authors||[]).slice(0,2).join(', ')+((p.authors||[]).length>2?'...':'');full+=`| ${i+1} | ${String(p.title).slice(0,60).replace(/\|/g,'/')} | ${a||'—'} | ${p.year||'—'} | ${p.itemType||'article'} | ${(p.sources||[p.source]).join('/')} | ${p.citations||0} | ${p.doi||'—'} |\n`;});
+    if(filteredOutPapers.length){
+      full+=`\n### Excluidas por periodo (${filteredOutPapers.length})\n\n| # | Obra | Año | Fuente |\n|---|---|---|---|\n`;
+      filteredOutPapers.forEach((p,i)=>{full+=`| ${i+1} | ${String(p.title).slice(0,60).replace(/\|/g,'/')} | ${p.year||'?'} | ${p.source} |\n`;});
+    }
     generatedText=full;
     sectionTextsStore={...displaySections};
 
-    setHPStep(6);
-    const words=Object.values(displaySections).join(' ').split(/\s+/).length;
-    log(`🎉 ¡Completado en ${elapsed}s! ${allPapers.length} fuentes · ${sections.length} secciones · Score: ${qs}`,'ok');
+    lastRun={
+      app:'Humanitas',version:APP_VERSION,generated_at:new Date().toISOString(),
+      topic,discipline:currentDisc,work_type:workTypeCtx,language:lang,citation_style:cite,
+      keywords:kw,instructions:instruct,model:flow.model,temperature:temp,target_words:wc,top_papers:topP,
+      sources:srcCfg.map(s=>({id:s.id,name:s.name,limit:s.lim})),
+      year_range:{from:yr.from,to:yr.to},
+      queries,research_questions:plan.research_questions||[],
+      agent_tokens:Object.fromEntries(AGENTS.map(a=>[a.id,getTokens(a.id)])),
+      selection_flow:flow,metrics,
+      usage:{prompt_tokens:RUN.inTok,completion_tokens:RUN.outTok,calls:RUN.calls,cost_usd:Number(runCost().toFixed(5)),by_agent:usageTable()},
+      corpus:corpus.map((p,i)=>({n:i+1,title:p.title,authors:p.authors,year:p.year,venue:p.journal||p.publisher,type:p.itemType,doi:p.doi,url:p.url,citations:p.citations,sources:p.sources||[p.source],oa_status:p.oa_status})),
+      references:fin.refs.map(r=>({n:r.n,doi:r.paper.doi,title:r.paper.title,formatted:r.line})),
+      audit:auditFindings,
+      sections:displaySections
+    };
 
-    renderOutputSections(displaySections,allPapers,gapsText,{time:elapsed+'s',score:qs});
+    setHPStep(6);
+    log(`🎉 Completado en ${elapsed}s · ${allPapers.length} obras · ${fin.refs.length} referencias · ${(metrics.resolved*100).toFixed(0)}% de citas resueltas · $${runCost().toFixed(4)}`,'ok');
+
+    renderOutputSections(displaySections,fin.refs,gapsText,{time:elapsed+'s',metrics,flow,doPrisma},filteredOutPapers);
+    renderAuditPanel(auditFindings,metrics,finalAudits);
     document.getElementById('exportRow').style.display='flex';
 
     if(gapsText){
       const ga=document.getElementById('gapsArea');ga.innerHTML='';
       const gl=document.createElement('div');gl.className='gaps-list fi';
-      gapsText.split(/\nGAP \[?\d+\]?:/i).filter(Boolean).forEach((g,i)=>{const lines=g.trim().split('\n');const card=document.createElement('div');card.className='gap-card';card.innerHTML=`<h4>LAGUNA ${i+1}: ${lines[0].replace(/^[:.\s]+/,'').trim()}</h4><p>${lines.slice(1).join('<br>').trim()}</p>`;gl.appendChild(card);});
+      gapsText.split(/\nGAP \[?\d+\]?:/i).filter(Boolean).forEach((g,i)=>{
+        const lines=g.trim().split('\n');const card=document.createElement('div');card.className='gap-card';
+        card.innerHTML=`<h4>LAGUNA ${i+1}: ${esc(lines[0].replace(/^[:.\s]+/,'').trim())}</h4><p>${esc(lines.slice(1).join('\n')).replace(/\n/g,'<br>')}</p>`;
+        gl.appendChild(card);
+      });
       ga.appendChild(gl);
     }
 
-    saveToHistory(topic,words,sections.length,elapsed+'s');
-    localStorage.removeItem('humanitas_draft');
+    await saveToHistory(topic,metrics.words,Object.keys(displaySections).length,elapsed+'s');
+    await idbDel('draft');
     showMain('output');
     document.getElementById('outputBadge').style.display='';
 
   }catch(e){
-    if(e.message==='__STOPPED__'){
-      log('⏹ Generación detenida por el usuario.','warn');
-    } else {
+    if(e.message==='__STOPPED__')log('⏹ Generación detenida por el usuario.','warn');
+    else{
       log('❌ Error: '+e.message,'err');
       if(e.message.includes('401'))log('💡 API key incorrecta. Verifica en platform.openai.com/api-keys','warn');
       else if(e.message.includes('429'))log('💡 Rate limit. Espera unos segundos.','warn');
@@ -1494,18 +2616,36 @@ async function startGeneration(){
     }
     if(Object.keys(sectionTextsStore).length>0){
       log('💾 Guardando borrador parcial...','warn');
-      renderOutputSections(sectionTextsStore,allPapersStore,gapsStore,{time:Math.round((Date.now()-tStart)/1000)+'s',score:'N/A'});
+      renderOutputSections(sectionTextsStore,lastRefs,gapsStore,{time:Math.round((Date.now()-tStart)/1000)+'s'});
       document.getElementById('partialBadge').style.display='flex';
       document.getElementById('exportRow').style.display='flex';
       document.getElementById('outputBadge').style.display='';
     }
   }finally{
-    isRunning=false;shouldStop=false;
-    document.getElementById('btnGen').disabled=false;document.getElementById('btnGen').innerHTML='▶ Generar';
+    isRunning=false;shouldStop=false;streamTarget(null);
+    document.getElementById('btnGen').disabled=false;
+    document.getElementById('btnGen').innerHTML='▶ Generar revisión';
     document.getElementById('btnStop').disabled=true;
-    document.getElementById('btnGenWizard').disabled=false;document.getElementById('btnGenWizard').innerHTML='▶ Generar revisión';
+    document.getElementById('btnGenWizard').disabled=false;
     document.getElementById('btnStopWizard').disabled=true;
+    updateLiveCost();
   }
+}
+
+function DEFAULT_STRUCTURE(disc,lang,wc){
+  const T={
+    legal:{Spanish:['Introducción','Marco jurídico y normativo','Análisis doctrinal','Jurisprudencia relevante','Derecho comparado','Lagunas y propuestas de reforma','Conclusiones'],
+           English:['Introduction','Legal and Regulatory Framework','Doctrinal Analysis','Relevant Case Law','Comparative Law','Gaps and Reform Proposals','Conclusions']},
+    human:{Spanish:['Introducción','Contextualización histórica e intelectual','Principales corrientes y debates','Análisis hermenéutico','Recepción e influencia','Perspectivas actuales y líneas abiertas','Conclusiones'],
+           English:['Introduction','Historical and Intellectual Context','Main Currents and Debates','Hermeneutic Analysis','Reception and Influence','Current Perspectives and Open Lines','Conclusions']},
+    social:{Spanish:['Introducción','Marco teórico','Estado de la cuestión','Enfoques metodológicos','Hallazgos y debates principales','Lagunas y agenda de investigación','Conclusiones'],
+            English:['Introduction','Theoretical Framework','State of the Question','Methodological Approaches','Main Findings and Debates','Gaps and Research Agenda','Conclusions']},
+  };
+  const d=T[disc]||T.social;
+  const names=d[lang]||d.Spanish;
+  const w=[0.10,0.17,0.26,0.18,0.14,0.09,0.06];
+  const o={};names.forEach((n,i)=>o[n]=Math.round(wc*(w[i]||0.08)/50)*50);
+  return o;
 }
 
 // ═══════════════════════════════════════════════════
