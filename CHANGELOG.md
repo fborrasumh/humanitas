@@ -5,6 +5,32 @@ y [Versionado Semántico](https://semver.org/lang/es/).
 
 ---
 
+## [3.0.0] — 2026-10-23
+
+Rediseño sobre los módulos de la plataforma Forja (interfaz y motor), tomando como base el de Doctoralia v3.
+
+### Añadido
+- Interfaz en español, inglés y portugués, con selector y `?lang=`; el idioma de la revisión sigue siendo independiente.
+- Proveedores de IA: OpenAI, Google Gemini y Anthropic Claude, con la clave de cada persona y desplegable con los modelos de la clave.
+- Ejemplo sin clave ni red, en los tres idiomas (obras ficticias marcadas `[DEMO]`), que muestra la eliminación de una cita fuera de rango y de una autor-año inventada.
+- Aviso previo al envío con muestra y enmascarado de correo, DNI/NIE y teléfono.
+- Secciones de consulta (Artículo, Auditoría, Lagunas, Historial, Agentes y prompts) fuera del recorrido lineal.
+- Tipo documental también en Semantic Scholar, CrossRef, RIS y DOI resueltos; los nombres «Apellidos, Nombre» conservan los apellidos compuestos.
+- Bibliografía alfabética también en MLA y formato propio para tesis en todos los estilos; textos fijos de las referencias en el idioma del documento.
+- Migración automática desde la v2: clave de OpenAI, clave de Semantic Scholar, tokens por agente e historial (como archivo de solo descarga).
+
+### Cambiado
+- «Citas resueltas» cuenta los marcadores que el modelo emitió y el código eliminó.
+- El coste se calcula con precios que escribe la persona; ya no hay tabla de precios en el código.
+- Word se genera dentro de la página, sin librerías externas; la política de seguridad solo admite las seis bases y los tres proveedores.
+
+### Retirado
+- Los agentes `entropy`, `voice`, `formatter` y `conclusion_writer`, que figuraban en la lista pero nunca se ejecutaban.
+- Los proxies públicos de arXiv (sacaban las consultas a terceros); arXiv se consulta solo por DataCite.
+- El parche específico de `gpt-6-luna`: el módulo de proveedores adapta los parámetros a cada modelo.
+
+---
+
 ## [2.0.0] — 2026-08-31
 
 Versión centrada en la **integridad de las citas** y en adecuar la herramienta a cómo se
