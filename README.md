@@ -46,7 +46,7 @@ Fernando Borrás Rocher (Universidad Miguel Hernández de Elche). ORCID: [0000-0
 
 ## Cómo citar
 
-Borrás Rocher, F. (2026). *Humanitas* (v3.0.0) [Software]. https://doi.org/10.5281/zenodo.21423295
+Borrás Rocher, F. (2026). *Humanitas* (v3.1.0) [Software]. https://doi.org/10.5281/zenodo.21423295
 
 ## Licencia
 

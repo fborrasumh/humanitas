@@ -5,6 +5,18 @@ y [Versionado Semántico](https://semver.org/lang/es/).
 
 ---
 
+## [3.1.0] — 2026-11-21
+
+### Cambiado
+- La bibliografía quedaba casi siempre por debajo de 20 referencias. El corpus que ve el redactor pasa de 25 obras fijas a 30 (borrador rápido), 50 (estándar) o 60 (exhaustiva). Las configuraciones guardadas con el antiguo valor por defecto (25) se actualizan solas.
+- El localizador ya no se limita a «las 15 obras más relevantes», que el redactor acababa citando en todas las secciones.
+- Cada sección recibe los índices que aún no ha citado ninguna sección anterior y un mínimo de obras distintas.
+
+### Añadido
+- Pasada de cobertura al final de la redacción: si el texto cita menos obras distintas que el objetivo (70 % del corpus, entre 30 y 40), cada sección integra las no citadas que encajen. Solo se acepta si añade obras nuevas sin perder citas ni más del 10 % del texto.
+
+---
+
 ## [3.0.0] — 2026-10-23
 
 Rediseño sobre los módulos de la plataforma Forja (interfaz y motor), tomando como base el de Doctoralia v3.
