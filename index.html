@@ -1939,6 +1939,11 @@ const I18N = {
   "🔖 Corpus de citación fijado: {0} obras numeradas [1]–[{0}]": "🔖 Citation corpus fixed: {0} works numbered [1]–[{0}]",
   "📚 Cobertura final: {0} de {1} obras citadas": "📚 Final coverage: {0} of {1} works cited",
   "➕ «{0}»: +{1} obras integradas": "➕ “{0}”: +{1} works integrated",
+  "📚 Segunda vuelta de cobertura: {0} de {1} obras citadas (objetivo {2}).": "📚 Second coverage round: {0} of {1} works cited (target {2}).",
+  "↩️ «{0}»: cambio descartado ({1})": "↩️ “{0}”: change discarded ({1})",
+  "no añade obras nuevas": "adds no new works",
+  "pierde citas {0}": "loses citations {0}",
+  "recorta el texto de {0} a {1} palabras": "shortens the text from {0} to {1} words",
   "📚 Cobertura: {0} de {1} obras citadas (objetivo {2}). Integrando obras no citadas…": "📚 Coverage: {0} of {1} works cited (target {2}). Integrating uncited works…",
   "🗓 Filtro temporal: {0} → {1} obras": "🗓 Time filter: {0} → {1} works",
   "🤖 Detector de lagunas…": "🤖 Gap detector…",
@@ -2473,6 +2478,11 @@ const I18N = {
   "🔖 Corpus de citación fijado: {0} obras numeradas [1]–[{0}]": "🔖 Corpus de citação fixado: {0} obras numeradas [1]–[{0}]",
   "📚 Cobertura final: {0} de {1} obras citadas": "📚 Cobertura final: {0} de {1} obras citadas",
   "➕ «{0}»: +{1} obras integradas": "➕ «{0}»: +{1} obras integradas",
+  "📚 Segunda vuelta de cobertura: {0} de {1} obras citadas (objetivo {2}).": "📚 Segunda volta de cobertura: {0} de {1} obras citadas (objetivo {2}).",
+  "↩️ «{0}»: cambio descartado ({1})": "↩️ «{0}»: alteração descartada ({1})",
+  "no añade obras nuevas": "não acrescenta obras novas",
+  "pierde citas {0}": "perde as citações {0}",
+  "recorta el texto de {0} a {1} palabras": "encurta o texto de {0} para {1} palavras",
   "📚 Cobertura: {0} de {1} obras citadas (objetivo {2}). Integrando obras no citadas…": "📚 Cobertura: {0} de {1} obras citadas (objetivo {2}). A integrar obras não citadas…",
   "🗓 Filtro temporal: {0} → {1} obras": "🗓 Filtro temporal: {0} → {1} obras",
   "🤖 Detector de lagunas…": "🤖 Detetor de lacunas…",
@@ -2484,7 +2494,7 @@ const I18N = {
 /* ══ Datos de Humanitas: disciplinas, tipos de trabajo, agentes, prompts, presets, estructuras y ejemplo sin clave ══
    Los prompts se escriben una vez, en español (no se traducen). El idioma de la REVISIÓN (cfg.lang: Spanish, English…)
    es independiente del idioma de la interfaz y se pasa a cada agente como parámetro. */
-const APP_VERSION = '3.1.0';
+const APP_VERSION = '3.1.1';
 const KEY_PREFIX = 'humanitas_';
 const IDIOMAS_SALIDA = [['Spanish', 'Español'], ['English', 'English'], ['Portuguese', 'Português'], ['French', 'Français'], ['German', 'Deutsch']];
 const SALIDA_DE_UI = {es: 'Spanish', en: 'English', pt: 'Portuguese'};
@@ -3502,16 +3512,21 @@ async function generaRevision(ent) {
     /* cobertura: si el texto cita menos obras distintas que el objetivo, cada sección integra las no citadas que encajen */
     if (citados.size < meta) {
       log(t('📚 Cobertura: {0} de {1} obras citadas (objetivo {2}). Integrando obras no citadas…', citados.size, N, meta), 'info');
-      for (let i = 0; i < titles.length && citados.size < meta; i++) {
-        if (PARAR) throw PARADO(); const sec = titles[i], pend = Array.from({length: N}, (_, j) => j + 1).filter(n => !citados.has(n)); if (!pend.length) break;
-        const max = Math.ceil((meta - citados.size) / (titles.length - i)) + 1, a0 = auditSection(sectionTexts[sec], N), d0 = new Set(a0.valid);
-        try {
-          const rw = await ag('crafter', [sys(`Eres un redactor de secciones académicas. Escribe en ${lang}. Cita únicamente con índices [n], 1 ≤ n ≤ ${N}. No elimines ni cambies las citas existentes.`),
-            usr(`Amplía la sección "${sec}" integrando hasta ${max} de las obras listadas abajo, solo las que su descripción respalde una afirmación pertinente para esta sección. Añade frases o matices con su cita [n] (usa exactamente esos índices). No elimines texto ni citas existentes. Si una obra no encaja, no la uses.\n\nOBRAS A INTEGRAR:\n${pend.map(n => citationList([corpus[n - 1]]).replace(/^\[1\]/, `[${n}]`)).join('\n\n')}\n\nTEXTO:\n${sectionTexts[sec]}`)], {temp: 0.3});
-          const ar = auditSection(rw, N); rep0.emitidos += Math.max(0, ar.ids.length - a0.ids.length); rep0.fuera += ar.invalid.length; rep0.noAnc += ar.authorYear.length;
-          const limpio = quitaAutorAnio(stripInvalidCites(rw, N)), a1 = auditSection(limpio, N), nuevos = [...new Set(a1.valid)].filter(n => !d0.has(n) && !citados.has(n));
-          if (nuevos.length && [...d0].every(n => a1.valid.includes(n)) && a1.words >= a0.words * 0.9) { sectionTexts[sec] = limpio; a1.valid.forEach(n => citados.add(n)); log(t('➕ «{0}»: +{1} obras integradas', sec, nuevos.length), 'ok'); }
-        } catch (e) { if (e.message === '__STOP__') throw e; }
+      for (let vuelta = 1; vuelta <= 2 && citados.size < meta; vuelta++) {   // 3.1.1: hasta dos vueltas por las secciones
+        if (vuelta > 1) log(t('📚 Segunda vuelta de cobertura: {0} de {1} obras citadas (objetivo {2}).', citados.size, N, meta), 'info');
+        for (let i = 0; i < titles.length && citados.size < meta; i++) {
+          if (PARAR) throw PARADO(); const sec = titles[i], pend = Array.from({length: N}, (_, j) => j + 1).filter(n => !citados.has(n)); if (!pend.length) break;
+          const falta = meta - citados.size, min = Math.min(pend.length, Math.ceil(falta / (titles.length - i))), a0 = auditSection(sectionTexts[sec], N), d0 = new Set(a0.valid);
+          try {
+            const rw = await ag('crafter', [sys(`Eres un redactor de secciones académicas. Escribe en ${lang}. Cita únicamente con índices [n], 1 ≤ n ≤ ${N}. No elimines ni cambies las citas existentes.`),
+              usr(`Amplía la sección "${sec}" integrando al menos ${min} (y hasta ${falta}) de las obras listadas abajo. Usa las que su descripción respalde una afirmación pertinente para esta sección; descarta solo las que no tengan relación con ella. Añade frases o matices con su cita [n] (usa exactamente esos índices). No elimines texto ni citas existentes.\n\nOBRAS A INTEGRAR:\n${pend.map(n => citationList([corpus[n - 1]]).replace(/^\[1\]/, `[${n}]`)).join('\n\n')}\n\nTEXTO:\n${sectionTexts[sec]}`)], {temp: 0.3});
+            const ar = auditSection(rw, N); rep0.emitidos += Math.max(0, ar.ids.length - a0.ids.length); rep0.fuera += ar.invalid.length; rep0.noAnc += ar.authorYear.length;
+            const limpio = quitaAutorAnio(stripInvalidCites(rw, N)), a1 = auditSection(limpio, N), nuevos = [...new Set(a1.valid)].filter(n => !d0.has(n) && !citados.has(n));
+            const perdidas = [...d0].filter(n => !a1.valid.includes(n)), corto = a1.words < a0.words * 0.9;
+            if (nuevos.length && !perdidas.length && !corto) { sectionTexts[sec] = limpio; a1.valid.forEach(n => citados.add(n)); log(t('➕ «{0}»: +{1} obras integradas', sec, nuevos.length), 'ok'); }
+            else log(t('↩️ «{0}»: cambio descartado ({1})', sec, [!nuevos.length && t('no añade obras nuevas'), perdidas.length && t('pierde citas {0}', perdidas.map(n => `[${n}]`).join(' ')), corto && t('recorta el texto de {0} a {1} palabras', a0.words, a1.words)].filter(Boolean).join('; ')), 'warn');
+          } catch (e) { if (e.message === '__STOP__') throw e; log(t('↩️ «{0}»: cambio descartado ({1})', sec, e.message), 'warn'); }
+        }
       }
       log(t('📚 Cobertura final: {0} de {1} obras citadas', citados.size, N), citados.size >= meta ? 'ok' : 'warn');
     }
